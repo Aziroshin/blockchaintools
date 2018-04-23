@@ -5,7 +5,7 @@
 #=======================================================================================
 
 from lib.currencies import CurrencyConfig, Wallet, WalletError, DaemonStuckError
-from lib.arguments import ArgumentSetup
+from lib.arguments import ArgumentSetup, ParserSetup
 from lib.actions import Action, Actions
 from lib.filesystem import BatchPathExistenceCheck
 
@@ -225,15 +225,36 @@ class BitcoinWallet(Wallet):
 					.format(error=stderr.decode()), WalletError.codes.CLI_ERROR)
 		return int(blockCount)
 
-#==========================================================
-class BitcoinArgumentSetup(ArgumentSetup): pass#TODO
-
-#==========================================================
-class BitcoinActions(Actions): pass#TODO
-
 #=======================================================================================
 # Actions
 #=======================================================================================
+
+#==========================================================
+class CliAction(Action):
+	def run(self):
+		print("cli action called")
+
+#==========================================================
+class BitcoinActions(Actions):
+	def setUp(self):
+		super().setUp()
+		self.add("cli", CliAction)
+
+#=======================================================================================
+# Arguments
+#=======================================================================================
+
+#==========================================================
+class CliParserSetup(ParserSetup):
+	def setUp(self):
+		self.parser.add_argument("-n", "--name", dest="node_name")
+
+#==========================================================
+class BitcoinArgumentSetup(ArgumentSetup):
+	def setUp(self):
+		super().setUp()
+		# cli
+		CliParserSetup(self.addSubParser("cli"))
 
 #=======================================================================================
 # Exports

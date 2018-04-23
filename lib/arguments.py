@@ -26,7 +26,7 @@ class CommandLine(object, metaclass=Singleton):
 	def __init__(self):
 		self.parser = argparse.ArgumentParser()
 		self._subparsers = None
-		self.subParsers = []
+		self.subParsers = {}
 		
 	def initSubParsers(self, *args, **kwargs):
 		self._subparsers = self.parser.add_subparsers(*args, **kwargs)
@@ -38,15 +38,49 @@ class CommandLine(object, metaclass=Singleton):
 		if self._subparsers is None:
 			self._subparsers = self.parser.add_subparsers()
 		subParser = self._subparsers.add_parser(*args, **kwargs)
-		self.subParsers.append(subParser)
+		if len(args):
+			name = args[0]
+		else:
+			name = kwargs["name"]
+		self.subParsers[name] = subParser
 		return subParser
 	
 	def showFullHelp(self):
 		# Show main parser help.
+		print("#============================")
+		print("# Help")
+		print("#============================\n")
 		self.parser.print_help()
 		# Show help for all subparsers, too.
-		for subParser in self.subParsers:
-			subParser.show_help()
+		if len(self.subParsers.keys()):
+			print("\n#============================")
+			print("# Actions")
+			print("#============================\n")
+			for name, subParser in self.subParsers.items():
+				print("#==============")
+				print("#", name)
+				print("#==============\n")
+				subParser.print_help()
+
+class ParserSetup(object):
+	
+	#=============================
+	"""Takes a parser for configuration.
+	This serves the purpose of helping to organize argument setup code a little more.
+	
+	Takes:
+		- parser (ArgumentParser)
+			Gets saved to self.parser for reference from .setUp()
+	
+	Override .setUp() with calls to self.parser."""
+	#=============================
+	
+	def __init__(self, parser):
+		self.parser = parser
+		self.setUp()
+		
+	def setUp(self):
+		pass#OVERRIDE
 
 class ArgumentSetup(object):
 	
@@ -62,9 +96,6 @@ class ArgumentSetup(object):
 	def __init__(self):
 		self.commandLine = CommandLine()
 	
-	def setUp(self):
-		pass#OVERRIDE
-	
 	@property
 	def parser(self):
 		return self.commandLine.parser
@@ -73,7 +104,9 @@ class ArgumentSetup(object):
 	def subParsers(self):
 		return self.commandLine.subParsers
 	
-	@property
+	def setUp(self):
+		pass#OVERRIDE
+	
 	def addSubParser(self, *args, **kwargs):
 		return self.commandLine.addSubParser(*args, **kwargs)
 		

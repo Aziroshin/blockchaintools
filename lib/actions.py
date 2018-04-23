@@ -19,6 +19,12 @@ class Action(object):
 
 class Actions(dict):
 	
+	def __init__(self):
+		self.setUp()
+	
+	def setUp(self):
+		pass#OVERRIDE
+	
 	def add(self, handle, action):
 		self[handle] = action
 	
