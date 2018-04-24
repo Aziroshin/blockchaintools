@@ -11,6 +11,8 @@ from lib.datatypes import Singleton
 # Library
 #=======================================================================================
 
+class ActionData(argparse.Namespace): pass
+
 class Action(object):
 	
 	#=============================
@@ -19,7 +21,7 @@ class Action(object):
 	Takes:
 		- handle (string)
 			The handle by which this action is referenced. Useful for error messaging.
-		- args (None or argparse.Namespace style object or similar(no cruft))
+		- data (None or ActionData)
 			Object containing all necessary data as attributes. Theoretically, this can
 			be any type of object, but error reporting measures won't be optimized around,
 			say, passing a dict, list, int or some wild object.
@@ -35,9 +37,9 @@ class Action(object):
 	"""
 	#=============================
 	
-	def __init__(self, handle, args=None):
+	def __init__(self, handle, data):
 		self.handle = handle
-		self.args = args
+		self.data = data
 		
 	def run(self):
 		pass#OVERRIDE

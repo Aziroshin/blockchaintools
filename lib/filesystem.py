@@ -5,6 +5,7 @@
 #=======================================================================================
 
 import os
+import shutil
 
 from lib.exceptions import Error
 
@@ -40,6 +41,8 @@ class BatchPathExistenceCheckPath(object):
 		This also considers executable availability through $PATH, in case the specified
 		'path' is not actually a path per se, but the name of an executable available through
 		$PATH."""
+		if self.path is None:
+			return False
 		if os.path.exists(self.path):
 			return True
 		else:

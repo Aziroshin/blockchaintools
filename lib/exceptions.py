@@ -4,6 +4,10 @@
 # Imports
 #=======================================================================================
 
+# Builtin
+import os
+
+# Local
 from lib.datatypes import Namespace
 
 #=======================================================================================
@@ -27,8 +31,8 @@ class FancyErrorMessage(object):
 	#=============================
 
 	def __init__(self, message, title=""):
-		decorTop = "[MNCHECKER ERROR]{title}".format(title=title)
-		decorBottom = "[MNCHECKER ERROR]"
+		decorTop = "[BEGIN: BLOCKCHAINTOOLS ERROR]{title}".format(title=title)
+		decorBottom = "[END: BLOCKCHAINTOOLS ERROR]"
 		self.string = "{eol}{decorTop}{eol}{message}{eol}{decorBottom}"\
 			.format(eol=os.linesep, decorTop=decorTop, message=message, decorBottom=decorBottom)
 		__repr__ = self.string

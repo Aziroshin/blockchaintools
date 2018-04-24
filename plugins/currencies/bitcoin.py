@@ -4,6 +4,11 @@
 # Imports
 #=======================================================================================
 
+# Builtins
+import os
+import shutil
+
+# Local
 from lib.currencies import CurrencyConfig, Wallet, WalletError, DaemonStuckError
 from lib.arguments import ArgumentSetup, ParserSetup
 from lib.actions import Action, Actions
@@ -55,48 +60,54 @@ class BitcoinConfig(CurrencyConfig):
 	defaultTxBinName = "{0}-tx".format(defaultFileBaseName)
 	defaultQtBinName = "{0}-qt".format(defaultFileBaseName)
 	defaultDataDirName = ".{0}".format(defaultFileBaseName)
+	defaultConfigFileName = "{0}.conf".format(defaultFileBaseName)
 	defaultRpcHost = "localhost"
 	defaultRpcPort = "8332" # Example of string usage when it could have been int.
 	#=============================
 	
 	def __init__(self, basePaths=defaultBasePaths, cliBinName=defaultCliBinName,\
 		daemonBinName=defaultDaemonBinName, dataDirName=defaultDataDirName,\
-		txBinName=defaultTxBinName, qtBinName=defaultQtBinName,\
-		host=defaultRpcHost, port=defaultRpcPort):
+		configFileName=defaultConfigFileName, txBinName=defaultTxBinName,\
+		qtBinName=defaultQtBinName, host=defaultRpcHost, port=defaultRpcPort):
 		self.basePaths = basePaths
 		self.cliBinName = cliBinName
 		self.daemonBinName = daemonBinName
 		self.txBinName = txBinName
 		self.qtBinName = qtBinName
 		self.dataDirName = dataDirName
+		self.configFileName = configFileName
 		self.rpcHost = host
 		self.rpcPort = port
 	
 	@property
-	def cliBin(self):
-		return self.findBin(self.cliBinName)
+	def cliBinPath(self):
+		return self.findFile(self.cliBinName)
 	
 	@property
-	def daemonBin(self):
-		return self.findBin(self.daemonBinName)
+	def daemonBinPath(self):
+		return self.findFile(self.daemonBinName)
 
 	@property
-	def dataDir(self):
+	def configFilePath(self):
+		return self.findFile(self.configFileName)
+
+	@property
+	def dataDirPath(self):
 		return os.path.join(os.path.expanduser("~"), self.dataDirName)
 
-	def findBin(self, binName):
-		"""Locate a binary given the binName.
+	def findFile(self, fileName):
+		"""Locate a file given the fileName.
 		Iterates through the basePaths to find the binary, otherwise uses shutil.which."""
-		binPath = None
+		filePath = None
 		for path in self.basePaths:
-			if os.exists(path):
-				for fileName in os.listdir():
-					if fileName == binName:
-						binPath = os.path.join(path, binName)
+			if os.path.exists(path):
+				for prospectiveFileName in os.listdir():
+					if prospectiveFileName == fileName:
+						filePath = os.path.join(path, fileName)
 						break
-		if binPath == None:
-			return shutil.which(binName)
-		return binPath
+		if filePath == None:
+			return shutil.which(fileName)
+		return filePath
 
 #==========================================================
 class BitcoinWallet(Wallet):
@@ -106,39 +117,48 @@ class BitcoinWallet(Wallet):
 	#=============================
 	
 	def __init__(self, config):
+		
 		self.config = config
+		
+		#=============================
 		# Check path sanity.
 		batchPathExistenceCheck = BatchPathExistenceCheck()
-		batchPathExistenceCheck.addPath(self.config.cliBinPath, "cli-bin path: {path}".format(\
-			path=self.config.cliBinPath))
-		batchPathExistenceCheck.addPath(self.config.daemonBinPath, "daemon-bin path: {path}".format(\
-			path=self.config.daemonBinPath))
-		batchPathExistenceCheck.addPath(self.config.dataDirPath, "datadir path: {path}".format(\
-			path=self.config.dataDirPath))
-		if not self.config.confFilePath == None:
+		# cliBinPath
+		batchPathExistenceCheck.addPath(self.config.cliBinPath, "cli-bin path: {path}"\
+			.format(path=self.config.cliBinPath))
+		# daemonBinPath
+		batchPathExistenceCheck.addPath(self.config.daemonBinPath, "daemon-bin path: {path}"\
+			.format(path=self.config.daemonBinPath))
+		# dataDirPath
+		batchPathExistenceCheck.addPath(self.config.dataDirPath, "datadir path: {path}"\
+			.format(path=self.config.dataDirPath))
+		# configFilePath
+		if not self.config.configFilePath == None:
 			# A conf file path got specified; check too.
-			batchPathExistenceCheck.addPath(self.config.confFilePath, "conf-file path: {path}".format(\
-				path=self.config.confFilePath))
+			batchPathExistenceCheck.addPath(self.config.configFilePath, "conf-file path: {path}"\
+				.format(path=self.config.configFilePath))
+		# Check all the paths we've specified for checking above.
 		batchPathExistenceCheck.checkAll()
 		# All paths are dandy, nice!
+		#=============================
 
 	def runCli(self, commandLine):
 		"""Run the command line version of the wallet with a list of command line arguments."""
-		if not self.config.confFilePath == None:
+		if not self.config.configFilePath == None:
 			return Process([self.config.cliBinPath,\
 				"-datadir={datadir}".format(datadir=self.config.dataDirPath),\
-				"-conf={confFilePath}".format(confFilePath=self.config.confFilePath)] + commandLine)
+				"-conf={configFilePath}".format(configFilePath=self.config.configFilePath)] + commandLine)
 		else:
 			return Process([self.config.cliBinPath,\
 				"-datadir={datadir}".format(datadir=self.config.dataDirPath)] + commandLine)
 
 	def runDaemon(self, commandLine):
 		"""Run the daemon. Takes a list for command line arguments to it."""
-		if not self.config.confFilePath == None:
+		if not self.config.configFilePath == None:
 			return Process([self.config.daemonBinPath,\
 				"-daemon",\
 				"-datadir={datadir}".format(datadir=self.config.dataDirPath),\
-				"-conf={confFilePath}".format(confFilePath=self.config.confFilePath)] +commandLine)
+				"-conf={configFilePath}".format(configFilePath=self.config.configFilePath)] +commandLine)
 		else:
 			return Process([self.config.daemonBinPath,\
 				"-daemon",\
@@ -232,7 +252,8 @@ class BitcoinWallet(Wallet):
 #==========================================================
 class CliAction(Action):
 	def run(self):
-		print("cli action called")
+		wallet = Wallet(self.data.Config())
+		print(wallet)
 
 #==========================================================
 class BitcoinActions(Actions):

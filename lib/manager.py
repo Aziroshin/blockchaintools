@@ -19,7 +19,7 @@ import shutil
 from pathlib import Path
 # Local.
 from lib.arguments import CommandLine, Arguments, ArgumentSetup
-from lib.actions import Action, Actions
+from lib.actions import ActionData, Action, Actions
 from lib.plugins import Plugin
 
 #=======================================================================================
@@ -76,6 +76,23 @@ class SingleCurrencyManager(object):
 		
 		# Run requested action.
 		if not self.args.action is None:
-			self.plugin.module.Actions().run(self.args.action, self.args)
+			
+			data = ActionData()
+			# We're passing the command line arguments to the plugin because each
+			# action may have its own subparser configuration, depending on
+			# how the plugin defines its command line parameters.
+			data.args = self.args
+			# The reason why the config is specified on this level and not just
+			# used directly in the module it's defined:
+			#     "Actions" contains all actions defined through the plugins the
+			#     plugin in question depends on, which means we might be calling
+			#     actions from plugins up in the dependency chain. If that action
+			#     directly referenced the corresponding Config internally, it'd
+			#     be using that parent plugin's Config. That's why we have to pass
+			#     it the Config that corresponds to the plugin we're working with
+			#     here.
+			data.Config = self.plugin.module.Config
+			
+			self.plugin.module.Actions().run(self.args.action, data)
 		else:
 			self.commandLine.showFullHelp()
