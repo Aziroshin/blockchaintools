@@ -85,8 +85,7 @@ class ParserSetup(object):
 class ArgumentSetup(object):
 	
 	#=============================
-	"""Argument setup that doesn't consider the class parent's .setUp method.
-	Override .setUp to create the command line argument setup using
+	"""Override .setUp to create the command line argument setup using
 	self.parser.<argparse functionality of your choice>.
 	
 	The ArgumentParser used is based off of CommandLine, which is a singleton,
