@@ -59,8 +59,12 @@ class Actions(dict):
 	
 	def __init__(self):
 		self.setUp()
+		self.setUpUninheritable()
 	
 	def setUp(self):
+		pass#OVERRIDE
+	
+	def setUpUninheritable(self):
 		pass#OVERRIDE
 	
 	def add(self, handle, action):

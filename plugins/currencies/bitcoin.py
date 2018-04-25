@@ -124,14 +124,19 @@ class BitcoinWallet(Wallet):
 		# Check path sanity.
 		batchPathExistenceCheck = BatchPathExistenceCheck()
 		# cliBinPath
-		batchPathExistenceCheck.addPath(self.config.cliBinPath, "cli-bin path: {path}"\
-			.format(path=self.config.cliBinPath))
+		batchPathExistenceCheck.addPath(self.config.cliBinPath,\
+			"cli-bin path: {path} (search paths: {searchPaths})"\
+			.format(path=self.config.cliBinPath, searchPaths=\
+				[os.path.join(path, self.config.cliBinName) for path in self.config.basePaths]))
 		# daemonBinPath
-		batchPathExistenceCheck.addPath(self.config.daemonBinPath, "daemon-bin path: {path}"\
-			.format(path=self.config.daemonBinPath))
+		batchPathExistenceCheck.addPath(self.config.daemonBinPath,\
+			"daemon-bin path: {path} (search paths: {searchPaths})"\
+			.format(path=self.config.daemonBinPath, searchPaths=\
+				[os.path.join(path, self.config.daemonBinName) for path in self.config.basePaths]))
 		# dataDirPath
-		batchPathExistenceCheck.addPath(self.config.dataDirPath, "datadir path: {path}"\
-			.format(path=self.config.dataDirPath))
+		batchPathExistenceCheck.addPath(self.config.dataDirPath,\
+			"datadir path: {path}"\
+				.format(path=self.config.dataDirPath))
 		# configFilePath
 		if not self.config.configFilePath == None:
 			# A conf file path got specified; check too.
@@ -253,22 +258,33 @@ class BitcoinWallet(Wallet):
 class CliAction(Action):
 	def run(self):
 		wallet = Wallet(self.data.Config())
+		print(self.data.args)
 		print(wallet)
+		print(self.data.Config)
 
 #==========================================================
 class BitcoinActions(Actions):
 	def setUp(self):
 		super().setUp()
 		self.add("cli", CliAction)
+		
+	def setUpUninheritable(self):
+		pass
 
 #=======================================================================================
 # Arguments
 #=======================================================================================
 
 #==========================================================
-class CliParserSetup(ParserSetup):
+class NodeNameParserSetup(ParserSetup):
 	def setUp(self):
-		self.parser.add_argument("-n", "--name", dest="node_name")
+		self.parser.add_argument("-n", "--name", dest="node_name", default=None)
+
+#==========================================================
+class CliParserSetup(NodeNameParserSetup):
+	def setUp(self):
+		super().setUp()
+		self.parser.add_argument("a", nargs="*")
 
 #==========================================================
 class BitcoinArgumentSetup(ArgumentSetup):
