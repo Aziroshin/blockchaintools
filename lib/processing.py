@@ -4,7 +4,15 @@
 # Imports
 #=======================================================================================
 
+# Python.
+from collections import namedtuple
 from subprocess import Popen, PIPE
+
+#=======================================================================================
+# Datatypes
+#=======================================================================================
+
+ProcessOutput = namedtuple("ProcessOutput", ["stdout", "stderr"], verbose=False, rename=False)
 
 #=======================================================================================
 # Library
@@ -34,10 +42,10 @@ class Process(object):
 		if not self._communicated:
 			self._stdout, self._stderr = self.process.communicate(timeout=timeout)
 			self._communicated = True
-		return (self._stdout, self._stderr)
+		return ProcessOutput(self._stdout, self._stderr)
 
 	def waitAndGetStdout(self, timeout=None):
-		return self.waitAndGetOutput(timeout)[0]
+		return self.waitAndGetOutput(timeout).stdout
 
 	def waitAndGetStderr(self, timeout=None):
-		return self.waitAndGetOutput(timeout)[1]
+		return self.waitAndGetOutput(timeout).stderr

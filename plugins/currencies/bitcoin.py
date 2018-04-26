@@ -13,6 +13,7 @@ from lib.currencies import CurrencyConfig, Wallet, WalletError, DaemonStuckError
 from lib.arguments import ArgumentSetup, ParserSetup
 from lib.actions import Action, Actions
 from lib.filesystem import BatchPathExistenceCheck
+from lib.processing import Process
 
 #=======================================================================================
 # Library
@@ -255,18 +256,25 @@ class BitcoinWallet(Wallet):
 #=======================================================================================
 
 #==========================================================
+class InfoAction(Action):
+	def run(self):
+		print(self.data.Config()._repr_str_terminal_)
+
+#==========================================================
 class CliAction(Action):
 	def run(self):
 		wallet = Wallet(self.data.Config())
-		print(self.data.args)
-		print(wallet)
-		print(self.data.Config)
+		output = wallet.runCliSafe(self.data.args.args).waitAndGetOutput(timeout=180)
+		print("{stdout}{stderr}"\
+			.format(stdout=output.stdout.decode(), stderr=output.stderr.decode()),\
+			end="")
 
 #==========================================================
 class BitcoinActions(Actions):
 	def setUp(self):
 		super().setUp()
 		self.add("cli", CliAction)
+		self.add("info", InfoAction)
 		
 	def setUpUninheritable(self):
 		pass
@@ -276,15 +284,33 @@ class BitcoinActions(Actions):
 #=======================================================================================
 
 #==========================================================
+# Argument Base Setups (for subclassing further below)
+#==========================================================
+
+#==========================================================
 class NodeNameParserSetup(ParserSetup):
+	"""Many actions will be specific to some node.
+	That node is identified by its datadir."""
 	def setUp(self):
-		self.parser.add_argument("-n", "--name", dest="node_name", default=None)
+		self.parser.add_argument("-i", "--identifier", dest="identifier", default=None,\
+			help="Specify the node you'd like to operate on."
+			"To do so, use the suffix for the appropriate datadir.")
+
+#==========================================================
+# Node-Independent arguments.
+# (no dependency on NodeNameParserSetup)
+#==========================================================
+
+#==========================================================
+# NodeNameParserSetup dependent arguments.
+#==========================================================
 
 #==========================================================
 class CliParserSetup(NodeNameParserSetup):
 	def setUp(self):
 		super().setUp()
-		self.parser.add_argument("a", nargs="*")
+		self.parser.add_argument("args", nargs="*",\
+			help="Arguments to the command line application.")
 
 #==========================================================
 class BitcoinArgumentSetup(ArgumentSetup):
@@ -292,6 +318,7 @@ class BitcoinArgumentSetup(ArgumentSetup):
 		super().setUp()
 		# cli
 		CliParserSetup(self.addSubParser("cli"))
+		self.addSubParser("info")
 
 #=======================================================================================
 # Exports
