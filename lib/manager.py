@@ -76,29 +76,39 @@ class SingleCurrencyManager(object):
 		
 		# Prepare, get and run requested action.
 		if not self.args.action is None:
-			
-			data = ActionData()
-			# We're passing the command line arguments to the plugin because each
-			# action may have its own subparser configuration, depending on
-			# how the plugin defines its command line parameters.
-			data.args = self.args
-			# The reason why the config is specified on this level and not just
-			# used directly in the module it's defined:
-			#     "Actions" contains all actions defined through the plugins the
-			#     plugin in question depends on, which means we might be calling
-			#     actions from plugins up in the dependency chain. If that action
-			#     directly referenced the corresponding Config internally, it'd
-			#     be using that parent plugin's Config. That's why we have to pass
-			#     it the Config that corresponds to the plugin we're working with
-			#     here.
-			data.Config = self.plugin.module.Config
-			
-			# Get requested action.
-			Action = self.plugin.module.Actions().get(self.args.action)
-			action = Action(handle=self.args.action, data=data)
-			
-			# Run action.
-			print(action.run().terminalString, end="")
-			
+			self.act(self.args.action)
 		else:
 			self.commandLine.showFullHelp()
+			
+	def act(self, actionHandle):
+		
+		"""Takes an action handle and runs the corresponding action."""
+		
+		data = ActionData()
+		# We're passing the command line arguments to the plugin because each
+		# action may have its own subparser configuration, depending on
+		# how the plugin defines its command line parameters.
+		data.args = self.args
+		# The reason why the config is specified on this level and not just
+		# used directly in the module it's defined:
+		#     "Actions" contains all actions defined through the plugins the
+		#     plugin in question depends on, which means we might be calling
+		#     actions from plugins up in the dependency chain. If that action
+		#     directly referenced the corresponding Config internally, it'd
+		#     be using that parent plugin's Config. That's why we have to pass
+		#     it the Config that corresponds to the plugin we're working with
+		#     here.
+		data.Config = self.plugin.module.Config
+		
+		# Get requested action.
+		Action = self.plugin.module.Actions().get(self.args.action)
+		action = Action(handle=self.args.action, data=data)
+		
+		# Run action.
+		self.printToTerminal(action.run().terminalString)
+		
+	def printToTerminal(self, string):
+		if string.endswith("\n"):
+			print(string, end="")
+		else:
+			print(string)
