@@ -376,7 +376,8 @@ class NodeNameParserSetup(ParserSetup):
 	def setUp(self):
 		self.parser.add_argument("-i", "--identifier", dest="identifier", default=None,\
 			help="Specify the node you'd like to operate on."
-			"To do so, use the suffix for the appropriate datadir.")
+			"To do so, use the suffix for the appropriate datadir.",\
+			metavar="DATADIR_SUFFIX")
 
 #==========================================================
 # Node-Independent arguments.
@@ -417,7 +418,8 @@ class StopParserSetup(NodeNameParserSetup):
 		defaultTimeout = 180
 		self.parser.add_argument("--timeout", dest="stopDaemonTimeout",\
 			help="For how many seconds to wait for the daemon to stop until we give up in "
-			"case it hangs. Default: {0}".format(defaultTimeout), default=defaultTimeout)
+			"case it hangs. Default: {0}".format(defaultTimeout), metavar="SECONDS",\
+				default=defaultTimeout)
 
 #==========================================================
 class StartDaemonParserSetup(CliParserSetup):
