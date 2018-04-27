@@ -19,7 +19,7 @@ import shutil
 from pathlib import Path
 # Local.
 from lib.arguments import CommandLine, Arguments, ArgumentSetup
-from lib.actions import ActionData, Action, Actions
+from lib.actions import ActionData, Actions
 from lib.plugins import Plugin
 
 #=======================================================================================
@@ -74,7 +74,7 @@ class SingleCurrencyManager(object):
 			]).get()
 		#self.args = self.plugin.module.ArgumentSetup().parser.parse_args()
 		
-		# Run requested action.
+		# Prepare, get and run requested action.
 		if not self.args.action is None:
 			
 			data = ActionData()
@@ -93,6 +93,12 @@ class SingleCurrencyManager(object):
 			#     here.
 			data.Config = self.plugin.module.Config
 			
-			self.plugin.module.Actions().run(self.args.action, data)
+			# Get requested action.
+			Action = self.plugin.module.Actions().get(self.args.action)
+			action = Action(handle=self.args.action, data=data)
+			
+			# Run action.
+			print(action.run().terminalString, end="")
+			
 		else:
 			self.commandLine.showFullHelp()

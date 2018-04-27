@@ -11,7 +11,7 @@ import shutil
 # Local
 from lib.currencies import CurrencyConfig, Wallet, WalletError, DaemonStuckError
 from lib.arguments import ArgumentSetup, ParserSetup
-from lib.actions import Action, Actions
+from lib.actions import Action, Actions, ActionReturnValue
 from lib.filesystem import BatchPathExistenceCheck
 from lib.processing import Process
 
@@ -256,19 +256,45 @@ class BitcoinWallet(Wallet):
 #=======================================================================================
 
 #==========================================================
+#BEGIN# Action: info
+
+#=============================
 class InfoAction(Action):
+	
+	#=============================
+	"""Provides various details about the setup."""
+	#=============================
+	
 	def run(self):
-		print(self.data.Config()._repr_str_terminal_)
+		return ActionReturnValue(self.data.Config())
+	
+#END#
+#==========================================================
 
 #==========================================================
+#BEGIN# Action: cli
+
+class CliActionReturnValue(ActionReturnValue):
+	@property
+	def string(self):
+		return "{stdout}{stderr}"\
+			.format(stdout=self.raw.stdout.decode(), stderr=self.raw.stderr.decode())
+
 class CliAction(Action):
+	
+	#=============================
+	"""Takes command line arguments for the wallet executable and runs it with them."""
+	#=============================
+	
 	def run(self):
 		wallet = Wallet(self.data.Config())
-		output = wallet.runCliSafe(self.data.args.args).waitAndGetOutput(timeout=180)
-		print("{stdout}{stderr}"\
-			.format(stdout=output.stdout.decode(), stderr=output.stderr.decode()),\
-			end="")
+		return CliActionReturnValue(wallet.runCliSafe(\
+			self.data.args.args).waitAndGetOutput(timeout=180))
+#END#
+#==========================================================
 
+#==========================================================
+# Register of all above defined actions.
 #==========================================================
 class BitcoinActions(Actions):
 	def setUp(self):

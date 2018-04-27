@@ -4,12 +4,84 @@
 # Imports
 #=======================================================================================
 
+# Python
 import argparse
+import json
+
+# Local
 from lib.datatypes import Singleton
 
 #=======================================================================================
 # Library
 #=======================================================================================
+
+#==========================================================
+# Action Classes
+#==========================================================
+
+class ActionReturnValue(object):
+	
+	#=============================
+	"""Every action returns an object of either this or a subclass of this.
+	
+	The return value as provided by the action gets stored in self.raw.
+	Various other forms may be available, such as self.json or self.string,
+	whereas string is expected to be optimized for terminal output first
+	and foremost.
+	
+	In case the subclass in question doesn't have customzed behaviour
+	for those additional forms, this class will provide basic default
+	behaviour, trying to deduce from self.raw."""
+	#=============================
+	
+	def __init__(self, raw):
+		self.raw = raw
+	
+	@property
+	def json(self):
+		
+		# NOTE: Custom decorators subclasses could use to declare methods
+		# that process this might be a good idea.
+		# Should also look at JSONEncoders.
+		
+		"""Override to provide custom json output. Will guess otherwise.
+		
+		Default attitude is to return null if it can't guess."""
+		
+		output = None
+		if hasattr(self.raw, "_repr_json_"):
+			output = self.raw._repr_json_
+		elif type(self.raw) in [str, int, float, tuple, list, dict, type(None)]:
+			output = self.raw
+		return json.dumps(output)
+	
+	@property
+	def string(self):
+		if hasattr(self.raw, "_repr_str_"):
+			output = self.raw._repr_str_
+		elif type(self.raw) == dict:
+			output = self._listToString(["{key}: {value}".format(key=key, value=value)\
+				for key, value in self.raw.items()])
+		elif type(self.raw) == list:
+			output = self._listToString(self.raw)
+		elif type(self.raw) == tuple:
+			output = self._listToString([item for item in self.raw])
+		else:
+			output = str(self.raw)
+		return output
+	
+	@property
+	def terminalString(self):
+		if hasattr(self.raw, "_repr_str_terminal_"):
+			output = self.raw._repr_str_terminal_
+		else:
+			output = self.string
+		return output
+	
+	def _listToString(self, listToTransform):
+		"""Turn a list into a user facing terminal friendly string."""
+		return "\n".join(listToTransform)
+	
 
 class ActionData(argparse.Namespace): pass
 
@@ -42,7 +114,8 @@ class Action(object):
 		self.data = data
 		
 	def run(self):
-		pass#OVERRIDE
+		#OVERRIDE
+		return ActionReturnValue(None)
 
 class Actions(dict):
 	
@@ -70,5 +143,5 @@ class Actions(dict):
 	def add(self, handle, action):
 		self[handle] = action
 	
-	def run(self, handle, args):
-		self[handle](handle, args).run()
+	def get(self, handle):
+		return self[handle]
