@@ -1,7 +1,8 @@
 # blockchaintools
-Currently, this only contans one usable script: legacy/vivomanager.sh, which is a simplistic masternode management solution. It's what I mainly use to manage nodes (as of early January 2018), but it seems like it might be of use for others. Be aware that it is not very robust, so tread lightly.
+Currently, this contains the code base for what, at this time, is predominantly intended to be a masternode management toolset once it reaches a stage at which it becomes actually usable.
+The first milestone will be for it to have the functionality of its much simpler predecessor: legacy/vivomanager.sh, which is what I mainly use to manage nodes (state: April 27, 2018). It's here for reference, and in case someone might find it useful. Be aware that it is not very robust, so tread lightly.
 
-Quick rundown of how one would set up a node with it (just run *vivomanager* without parameters and it'll give you an overview of available commands):
+Quick rundown of how one would set up a node with the legacy script (just run *vivomanager* without parameters and it'll give you an overview of available commands):
 
 ```
 vivomanager install
