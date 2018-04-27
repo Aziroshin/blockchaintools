@@ -295,13 +295,64 @@ class CliAction(Action):
 #==========================================================
 
 #==========================================================
+#BEGIN# Action: cli
+
+class StopAction(Action):
+	
+	#=============================
+	"""Stops the daemon."""
+	#=============================
+	
+	def run(self):
+		wallet = Wallet(self.data.Config())
+		return CliActionReturnValue(wallet.stopDaemon(\
+			self.data.args.stopDaemonTimeout)\
+			.waitAndGetOutput(timeout=self.data.args.stopDaemonTimeout))
+
+#END#
+#==========================================================
+
+
+#==========================================================
+#BEGIN# Actions: Daemon related
+
+class DaemonActionReturnValue(CliActionReturnValue): pass
+
+class StartDaemonAction(Action):
+	#=============================
+	"""Start the Daemon."""
+	#=============================
+	
+	def run(self):
+		wallet = Wallet(self.data.Config())
+		return DaemonActionReturnValue(wallet.startDaemon(\
+			self.data.args.args).waitAndGetOutput(timeout=180))
+
+class ReindexAction(Action):
+	
+	#=============================
+	"""Runs the wallet with -reindex. Wraps around CliAction and returns accordingly."""
+	#=============================
+	
+	def run(self):
+		modifiedData = self.data
+		modifiedData.args.args.insert(0, "-reindex")
+		return StartDaemonAction(handle=self.handle, data=modifiedData).run()
+
+##END#
+##==========================================================
+
+#==========================================================
 # Register of all above defined actions.
 #==========================================================
 class BitcoinActions(Actions):
 	def setUp(self):
 		super().setUp()
 		self.add("cli", CliAction)
+		self.add("stop", StopAction)
 		self.add("info", InfoAction)
+		self.add("reindex", ReindexAction)
+		self.add("start", StartDaemonAction)
 		
 	def setUpUninheritable(self):
 		pass
@@ -316,8 +367,12 @@ class BitcoinActions(Actions):
 
 #==========================================================
 class NodeNameParserSetup(ParserSetup):
+	
+	#=============================
 	"""Many actions will be specific to some node.
 	That node is identified by its datadir."""
+	#=============================
+	
 	def setUp(self):
 		self.parser.add_argument("-i", "--identifier", dest="identifier", default=None,\
 			help="Specify the node you'd like to operate on."
@@ -328,23 +383,62 @@ class NodeNameParserSetup(ParserSetup):
 # (no dependency on NodeNameParserSetup)
 #==========================================================
 
+# -
+
 #==========================================================
 # NodeNameParserSetup dependent arguments.
 #==========================================================
 
 #==========================================================
 class CliParserSetup(NodeNameParserSetup):
+	
+	#=============================
+	"""ParserSetup for the "cli" Action."""
+	#=============================
+	
+	@property
+	def help(self):
+		return "Arguments to the command line application."
+	
 	def setUp(self):
 		super().setUp()
 		self.parser.add_argument("args", nargs="*",\
-			help="Arguments to the command line application.")
+			help=self.help)
+
+#==========================================================
+class StopParserSetup(NodeNameParserSetup):
+	
+	#=============================
+	"""ParserSetup for the "stop" Action."""
+	#=============================
+	
+	def setUp(self):
+		super().setUp()
+		defaultTimeout = 180
+		self.parser.add_argument("--timeout", dest="stopDaemonTimeout",\
+			help="For how many seconds to wait for the daemon to stop until we give up in "
+			"case it hangs. Default: {0}".format(defaultTimeout), default=defaultTimeout)
+
+#==========================================================
+class StartDaemonParserSetup(CliParserSetup):
+	@property
+	def help(self):
+		return "Startup arguments to the daemon."
+	
+#==========================================================
+class ReindexDaemonParserSetup(CliParserSetup):
+	@property
+	def help(self):
+		return "Startup arguments to the daemon (besides -reindex)."
 
 #==========================================================
 class BitcoinArgumentSetup(ArgumentSetup):
 	def setUp(self):
 		super().setUp()
-		# cli
 		CliParserSetup(self.addSubParser("cli"))
+		StopParserSetup(self.addSubParser("stop"))
+		StartDaemonParserSetup(self.addSubParser("start"))
+		ReindexDaemonParserSetup(self.addSubParser("reindex"))
 		self.addSubParser("info")
 
 #=======================================================================================
