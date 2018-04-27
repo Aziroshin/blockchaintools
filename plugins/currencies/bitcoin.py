@@ -7,6 +7,7 @@
 # Builtins
 import os
 import shutil
+import time
 
 # Local
 from lib.currencies import CurrencyConfig, Wallet, WalletError, DaemonStuckError
