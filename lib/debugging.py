@@ -27,7 +27,7 @@ def dprint(*args):
 	elif len(args) == 1:
 		message = args[0]
 	else:
-		message = " ".join(args)
+		message = " ".join([str(arg) for arg in args])
 	
 	if "self" in contextLocals.keys():
 		className = "{name}.".format(\
