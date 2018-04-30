@@ -12,8 +12,6 @@ import os
 # Library
 #=======================================================================================
 
-class missingArgumentError(Exception): pass
-
 def dprint(*args):
 	
 	#=============================
@@ -25,7 +23,7 @@ def dprint(*args):
 	className = ""
 	
 	if len(args) == 0:
-		raise missingArgumentError("dprint needs at least 1 argument, 0 were given.")
+		message  = ""
 	elif len(args) == 1:
 		message = args[0]
 	else:
