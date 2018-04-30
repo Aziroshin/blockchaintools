@@ -83,6 +83,17 @@ class ActionReturnValue(object):
 		return "\n".join(listToTransform)
 	
 
+class ActionReturnValueAggregate(ActionReturnValue):
+	def __init__(self, returnValues=[]):
+		self.returnValues = returnValues
+		
+	def addReturnValue(self, returnValue):
+		self.returnValues.append(returnValue)
+		
+	@property
+	def string(self):
+		pass#TODO
+
 class ActionData(argparse.Namespace): pass
 
 class Action(object):

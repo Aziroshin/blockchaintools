@@ -331,13 +331,19 @@ class StartDaemonAction(Action):
 class ReindexAction(Action):
 	
 	#=============================
-	"""Runs the wallet with -reindex. Wraps around CliAction and returns accordingly."""
+	"""Runs the wallet with -reindex.
+	
+	Wraps around StopAction and CliAction and returns accordingly."""
 	#=============================
 	
 	def run(self):
+		stopReturnValue = StopAction(handle=self.handle, data=self.data).run()
 		modifiedData = self.data
 		modifiedData.args.args.insert(0, "-reindex")
-		return StartDaemonAction(handle=self.handle, data=modifiedData).run()
+		startReturnValue = StartDaemonAction(handle=self.handle, data=modifiedData).run()
+		return CliActionReturnValue("\n".join([stopReturnValue.raw, startReturnValue.raw]))
+		#TODO: Use ActionReturnValueAggregate instead of the above.
+		
 
 ##END#
 ##==========================================================
@@ -402,7 +408,6 @@ class CliParserSetup(NodeNameParserSetup):
 		return "Arguments to the command line application."
 	
 	def setUp(self):
-		super().setUp()
 		self.parser.add_argument("args", nargs="*",\
 			help=self.help)
 
@@ -414,7 +419,6 @@ class StopParserSetup(NodeNameParserSetup):
 	#=============================
 	
 	def setUp(self):
-		super().setUp()
 		defaultTimeout = 180
 		self.parser.add_argument("--timeout", dest="stopDaemonTimeout",\
 			help="For how many seconds to wait for the daemon to stop until we give up in "
@@ -428,7 +432,7 @@ class StartDaemonParserSetup(CliParserSetup):
 		return "Startup arguments to the daemon."
 	
 #==========================================================
-class ReindexDaemonParserSetup(CliParserSetup):
+class ReindexDaemonParserSetup(CliParserSetup, StopParserSetup):
 	@property
 	def help(self):
 		return "Startup arguments to the daemon (besides -reindex)."

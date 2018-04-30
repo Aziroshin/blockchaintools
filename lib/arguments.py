@@ -26,8 +26,8 @@ class CommandLine(object, metaclass=Singleton):
 	def __init__(self):
 		self.parser = argparse.ArgumentParser()
 		self._subparsers = None
-		self.subParsers = {}
-		
+		self.subParsers = {}r
+	
 	def initSubParsers(self, *args, **kwargs):
 		self._subparsers = self.parser.add_subparsers(*args, **kwargs)
 		
@@ -77,10 +77,37 @@ class ParserSetup(object):
 	
 	def __init__(self, parser):
 		self.parser = parser
+		self._makeSetup()
+		
+		return self._parser
+		
+	def _makeSetup(self):
+		
+		"""Runs through all .setUp methods in the class hierarchy
+		
+		Override to alter that behaviour.
+		
+		@MODIFIER@: Only use in this class and subclasses, no from-outside calls."""
+		
+		self.setUpUpstream()
 		self.setUp()
 		
 	def setUp(self):
+		"""Make calls to self.parser to configure command line parameters."""
 		pass#OVERRIDE
+	
+	def setUpUpstream(self):
+		"""Go through all base classes and call .setUp."""
+		try:
+			for Base in self.__class__.__bases__:
+				try:
+					super(Base, self).setUp()
+				except AttributeError:
+					# 'Guess someone mixed in a non-ParserSetup class as a parent.
+					pass
+		except AttributeError:
+			# It's us: Our parent class doesn't have .setUp. ;)
+			pass
 
 class ArgumentSetup(object):
 	
