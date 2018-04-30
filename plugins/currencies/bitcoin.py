@@ -10,15 +10,18 @@ import shutil
 import time
 
 # Local
-from lib.currencies import CurrencyConfig, Wallet, WalletError, DaemonStuckError
+from lib.currencies import CurrencyConfig, Wallet, WalletError
 from lib.arguments import ArgumentSetup, ParserSetup
 from lib.actions import Action, Actions, ActionReturnValue
 from lib.filesystem import BatchPathExistenceCheck
 from lib.processing import Process
+#from lib.debugging import dprint #NOTE: DEBUG
 
 #=======================================================================================
 # Library
 #=======================================================================================
+
+
 
 #==========================================================
 # Wallet Classes
@@ -112,11 +115,26 @@ class BitcoinConfig(CurrencyConfig):
 		return filePath
 
 #==========================================================
+# TODO: One day, this class will need to be redone. It's baggage from
+# an older time with hacks all over the place. It kind of worked for mnchecker,
+# but will prove to be unfit once it has to carry considerably more weight.
 class BitcoinWallet(Wallet):
 	
 	#=============================
 	"""Represents everything this script needs related to a bitcoin derived wallet."""
 	#=============================
+	
+	#=============================
+	# Wallet Strings
+	# These serve to detect wallet states from stdin/stderr output of the cli executable.
+	
+	# This is for detecting whether the executable cli can connect to the daemon.
+	# TODO: This is a hack and just BAD, especially if we should ever encounter
+	# a wallet with translated error strings.
+	rpcFailureMessageFragments = [\
+		"error: Could not locate RPC credentials",\
+		"error: couldn't connect to server"\
+	]
 	
 	def __init__(self, config):
 		
@@ -172,17 +190,22 @@ class BitcoinWallet(Wallet):
 				"-datadir={datadir}".format(datadir=self.config.dataDirPath)] +commandLine)
 
 	def runCliSafe(self, commandLine, _retrying=False):
+		
 		"""A version of .runCli that checks for the wallet tripping up and responds accordingly."""
+		
 		process = self.runCli(commandLine)
 		stdoutString, stderrString = process.waitAndGetOutput()
+		
 		# Catch the wallet taking the way out because the daemon isn't running.
-		if stderrString.decode().strip() == "error: couldn't connect to server":
+		if any([stderrString.decode().strip().startswith(fragment)\
+			for fragment in type(self).rpcFailureMessageFragments]):
 			print("[DEBUG Wallet.runCliSafe WalletError: ]", WalletError.__dict__)
 			raise WalletError(\
 				"Command line wallet can't connect to the daemon. Is the daemon running?\n{info}"\
 				.format(info="Wallet paths:\n\tcli: {cli}\n\tdaemon: {daemon}\n\tdatadir: {datadir}"\
 					.format(cli=self.config.cliBinPath, daemon=self.config.daemonBinPath, datadir=self.config.dataDirPath)),\
 				WalletError.codes.RPC_CONNECTION_FAILED)
+		
 		# Catch issues caused by the wallet connecting to the daemon right after the daemon started.
 		# As this involves retrying, we have to make sure we don't get stuck retrying forever.
 		if "error code: -28" in stdoutString.decode()\
@@ -198,7 +221,8 @@ class BitcoinWallet(Wallet):
 					continue
 				else:
 					return retriedProcess
-			raise DaemonStuckError("Daemon stuck at error -28.")
+			raise WalletError("Daemon stuck at error -28.", WalletError.codes.DAEMON_STUCK)
+		
 		return process
 
 	def runDaemonSafe(self, commandLine):
