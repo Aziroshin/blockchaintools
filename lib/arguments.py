@@ -26,7 +26,7 @@ class CommandLine(object, metaclass=Singleton):
 	def __init__(self):
 		self.parser = argparse.ArgumentParser()
 		self._subparsers = None
-		self.subParsers = {}r
+		self.subParsers = {}
 	
 	def initSubParsers(self, *args, **kwargs):
 		self._subparsers = self.parser.add_subparsers(*args, **kwargs)
@@ -78,8 +78,6 @@ class ParserSetup(object):
 	def __init__(self, parser):
 		self.parser = parser
 		self._makeSetup()
-		
-		return self._parser
 		
 	def _makeSetup(self):
 		
