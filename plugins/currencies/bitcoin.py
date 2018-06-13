@@ -12,10 +12,13 @@ import time
 # Local
 from lib.currencies import CurrencyConfig, Wallet, WalletError
 from lib.arguments import ArgumentSetup, ParserSetup
-from lib.actions import Action, Actions, ActionReturnValue
+from lib.actions import Action, Actions, ActionReturnValue, ActionReturnValueAggregate
 from lib.filesystem import BatchPathExistenceCheck
-from lib.processing import Process
+from lib.processing import Process, ProcessList
 #from lib.debugging import dprint #NOTE: DEBUG
+
+# Debug
+from lib.debugging import dprint
 
 #=======================================================================================
 # Library
@@ -140,6 +143,10 @@ class BitcoinWallet(Wallet):
 		
 		self.config = config
 		
+		#NOTE: DEBUG
+		self.getDaemonProcess()
+		raise Exception("CONTINUE DEVELOPING HERE")
+		
 		#=============================
 		# Check path sanity.
 		batchPathExistenceCheck = BatchPathExistenceCheck()
@@ -166,6 +173,36 @@ class BitcoinWallet(Wallet):
 		batchPathExistenceCheck.checkAll()
 		# All paths are dandy, nice!
 		#=============================
+
+	@property
+	def daemonRunning(self):
+		
+		"""Returns True if the daemon is running, False if it's not."""
+		
+		#TODO: This is a hacky way to determine whether the daemon is running.
+		# Being reluctant to introduce third party dependencies like psutil,
+		# this will have to do for now, but even this solution will need
+		# an improvement in the robustness department eventually.
+		
+		try:
+			self.runCliSafe("getblockcount")
+		except WalletError as error:
+			if error.code == type(error).codes.RPC_CONNECTION_FAILED:
+				return False
+		return True
+
+	def getDaemonProcess(self):
+		"""Returns an ExternalProcess object of the daemon process.
+		Returns None if no process is found."""
+		#processList = ProcessList(raw=False).byName(self.config.cliBinPath).byArg("-datadir")\
+			#.byArg(self.config.dataDirPath)
+		
+		
+		raise Exception("data dir path", self.config.dataDirPath)
+		# TODO: Recognize datadir of process started without -datadir option.
+		# Will probably need detection of HOME variable for process, just to be sure.
+	
+		#dprint("Process list:", ProcessList(raw=False).byPath(self.config.dataDirPath)[0].getPid())
 
 	def runCli(self, commandLine):
 		"""Run the command line version of the wallet with a list of command line arguments."""
@@ -301,7 +338,7 @@ class InfoAction(Action):
 
 class CliActionReturnValue(ActionReturnValue):
 	@property
-	def string(self):
+	def _repr_str_(self):
 		return "{stdout}{stderr}"\
 			.format(stdout=self.raw.stdout.decode(), stderr=self.raw.stderr.decode())
 
@@ -361,14 +398,30 @@ class ReindexAction(Action):
 	#=============================
 	
 	def run(self):
-		stopReturnValue = StopAction(handle=self.handle, data=self.data).run()
+		
+		returnValues = ActionReturnValueAggregate()
+		
+		# Try to stop wallet.
+		# TODO: This is extremely crude. A proper check for whether the wallet
+		# is running or not needs to be established.
+		# For example, this would likely fail if the RPC details were changed in
+		# the wallet's config during daemon runtime: The cli client would use the
+		# new details, but the daemon would still be initialized with the old
+		# ones. Result: RPC connection failure.
+		try:
+			returnValues.addReturnValue(StopAction(handle=self.handle, data=self.data).run())
+		except WalletError:
+			pass
+	
+		# Spoof -reindex into the args Namespace for the StartDaemonAction
+		# to start the daemon with -reindex.
 		modifiedData = self.data
 		modifiedData.args.args.insert(0, "-reindex")
-		startReturnValue = StartDaemonAction(handle=self.handle, data=modifiedData).run()
-		return CliActionReturnValue("\n".join([stopReturnValue.raw, startReturnValue.raw]))
-		#TODO: Use ActionReturnValueAggregate instead of the above.
+		returnValues.addReturnValue(StartDaemonAction(handle=self.handle,\
+			data=modifiedData).run())
 		
-
+		return returnValues
+	
 ##END#
 ##==========================================================
 

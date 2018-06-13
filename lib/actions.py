@@ -10,6 +10,7 @@ import json
 
 # Local
 from lib.datatypes import Singleton
+#from lib.debugging import dprint #NOTE: DEBUG
 
 #=======================================================================================
 # Library
@@ -83,17 +84,34 @@ class ActionReturnValue(object):
 		return "\n".join(listToTransform)
 	
 
+class ActionReturnValueAggregateList(list):
+	
+	@property
+	def _repr_str_(self):
+		return "".join([returnValue._repr_str_ for returnValue in self])
+	
+	@property
+	def _repr_str_terminal_(self):
+		return "".join([returnValue._repr_str_terminal_ for returnValue in self])
+	
 class ActionReturnValueAggregate(ActionReturnValue):
-	def __init__(self, returnValues=[]):
-		self.returnValues = returnValues
+	
+	#=============================
+	"""Takes multiple ActionReturnValue objects and provides aggregated access.
+	
+	Currently, only _repr_str_ is implemented, which will return a concatenation
+	of all ActionReturnValue objects' _repr_str_ values.
+	
+	_repr_json_ has to be implemented specifically
+	in appropriate subclasses for now if required."""
+	#=============================
+	
+	def __init__(self, returnValues=ActionReturnValueAggregateList()):
+		self.raw = returnValues
 		
 	def addReturnValue(self, returnValue):
-		self.returnValues.append(returnValue)
+		self.raw.append(returnValue)
 		
-	@property
-	def string(self):
-		pass#TODO
-
 class ActionData(argparse.Namespace): pass
 
 class Action(object):

@@ -81,11 +81,19 @@ class LinuxProcessList(UserList):
 	"""A handle to listing the processes running on a machine."""
 	#=============================
 	
-	def __init__(self, processes=[], initWithAll=True):
+	def __init__(self, processes=[], initWithAll=True, raw=False):
 		super().__init__(processes)
 		if not self and initWithAll:
 			self.data = self.data+self.getAll()
+		self.rawDefaultSetting = raw
 	
+	def raw(self, override):
+		"""Returns "raw" as set for the constructor if override is None, otherwise returns override."""
+		if override is None:
+			return self.rawDefaultSetting
+		else:
+			return override
+		
 	def getAllPids(self):
 		"""Return the PIDs of all running processes as integers."""
 		return [path.name for path in Path("/proc").iterdir() if str(path.name).isdigit()]
@@ -100,22 +108,30 @@ class LinuxProcessList(UserList):
 				pass
 		return processes
 	
-	def byName(self, name, raw=False):
+	def byName(self, name, raw=None):
 		"""Return type(self) object of all processes matching the specified name."""
 		return type(self)(processes=\
-			[p for p in self if p.getName(raw=raw) == name],\
+			[p for p in self if p.getName(raw=self.raw(raw)) == name],\
 			initWithAll=False)
 	
-	def byArg(self, arg, raw=False):
+	def byPath(self, path, raw=None):
+		"""Return type(self) object of all processes matching the specified path.
+		Path in this case refers to the path of the executable, represented
+		as the first element of the processes' argv."""
+		return type(self)(processes=\
+			[p for p in self if p.getPath(raw) == path],\
+			initWithAll=False)
+	
+	def byArg(self, arg, raw=None):
 		"""Return type(self) object of all processes having the specified argument."""
 		return type(self)(processes=\
-			[p for p in self if p.hasArg(arg, raw=raw)],\
+			[p for p in self if p.hasArg(arg, raw=self.raw(raw))],\
 			initWithAll=False)
 			
-	def byArgPart(self, argPart, raw=False):
+	def byArgPart(self, argPart, raw=None):
 		"""Return type(self) object of all processes"""
 		return type(self)(processes=\
-			[p for p in self if p.inArg(argPart, raw=raw, splitArgs=True)],\
+			[p for p in self if p.inArg(argPart, raw=self.raw(raw), splitArgs=True)],\
 			initWithAll=False)
 
 #TODO #NOTE: The list isn't live, but the processes are. This needs to change.
@@ -244,6 +260,10 @@ class ExternalLinuxProcess(object):
 	def getName(self, raw=None):
 		"""Name of the process without arguments."""
 		return self._typeString(self.info.comm, raw)
+	
+	def getPath(self, raw=None):
+		"""Executable path as it's found in the first element of the argv."""
+		return self.getArgv(raw=raw)[0]
 	
 	def getPid(self):
 		"""PID of the process. Returns as int."""
