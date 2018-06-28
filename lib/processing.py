@@ -81,29 +81,23 @@ class LinuxProcessList(UserList):
 	"""A handle to listing the processes running on a machine."""
 	#=============================
 	
-	def __init__(self, processes=[], initWithAll=True, raw=False):
+	def __init__(self, processes=[], initWithAll=True, raw=False, splitArgs=False):
+		# If you want to change raw and splitArgs defaults, you might also want to
+		# change them in self.getAll and ExternalLinuxProcess.__init__.
 		super().__init__(processes)
 		if not self and initWithAll:
-			self.data = self.data+self.getAll()
-		self.rawDefaultSetting = raw
-	
-	def raw(self, override):
-		"""Returns "raw" as set for the constructor if override is None, otherwise returns override."""
-		if override is None:
-			return self.rawDefaultSetting
-		else:
-			return override
+			self.data = self.data+self.getAll(raw=raw, splitArgs=splitArgs)
 		
 	def getAllPids(self):
 		"""Return the PIDs of all running processes as integers."""
 		return [path.name for path in Path("/proc").iterdir() if str(path.name).isdigit()]
 	
-	def getAll(self):
+	def getAll(self, raw=False, splitArgs=False):
 		"""Get a list of ExternalLinuxProcess objects for all running processes."""
 		processes = []
 		for pid in self.getAllPids():
 			try:
-				processes.append(ExternalLinuxProcess(pid))
+				processes.append(ExternalLinuxProcess(pid, raw=raw, splitArgs=splitArgs))
 			except NoSuchProcessError:
 				pass
 		return processes
@@ -111,7 +105,7 @@ class LinuxProcessList(UserList):
 	def byName(self, name, raw=None):
 		"""Return type(self) object of all processes matching the specified name."""
 		return type(self)(processes=\
-			[p for p in self if p.getName(raw=self.raw(raw)) == name],\
+			[p for p in self if p.getName(raw=raw) == name],\
 			initWithAll=False)
 	
 	def byPath(self, path, raw=None):
@@ -122,16 +116,16 @@ class LinuxProcessList(UserList):
 			[p for p in self if p.getPath(raw) == path],\
 			initWithAll=False)
 	
-	def byArg(self, arg, raw=None):
+	def byArg(self, arg, raw=None, splitArgs=None):
 		"""Return type(self) object of all processes having the specified argument."""
 		return type(self)(processes=\
-			[p for p in self if p.hasArg(arg, raw=self.raw(raw))],\
+			[p for p in self if p.hasArg(arg, raw=raw, splitArgs=splitArgs)],\
 			initWithAll=False)
 			
 	def byArgPart(self, argPart, raw=None):
 		"""Return type(self) object of all processes"""
 		return type(self)(processes=\
-			[p for p in self if p.inArg(argPart, raw=self.raw(raw), splitArgs=True)],\
+			[p for p in self if p.inArg(argPart, raw=raw, splitArgs=True)],\
 			initWithAll=False)
 
 #TODO #NOTE: The list isn't live, but the processes are. This needs to change.
@@ -223,9 +217,28 @@ class ExternalLinuxProcess(object):
 	not be available."""
 	#=============================
 	
-	def __init__(self, pid, raw=False):
+	def __init__(self, pid, raw=False, splitArgs=False):
 		self.info = LinuxProcessInfo(pid)
-		self.raw = raw
+		self.rawDefaultSetting = raw
+		self.splitArgsDefaultSetting = splitArgs
+	
+	#=============================
+	# Default overriders
+	
+	def raw(self, override):
+		"""Returns "raw" as set for the constructor if override is None, otherwise returns override."""
+		if override is None:
+			return self.rawDefaultSetting
+		else:
+			return override
+	
+	def splitArgs(self, override):
+		if override is None:
+			return self.splitArgsDefaultSetting
+		else:
+			return override
+		
+	#=============================
 	
 	def _typeString(self, byteString, raw=None):
 		
@@ -236,9 +249,7 @@ class ExternalLinuxProcess(object):
 		
 		If instructed to return non-raw, we will strip the trailing newline."""
 		
-		if raw is None:
-			raw = self.raw
-		if raw:
+		if self.raw(raw):
 			return byteString
 		else:
 			return byteString.decode().rstrip("\n")
@@ -250,20 +261,18 @@ class ExternalLinuxProcess(object):
 		Takes a list of bytes(), determines whether we're currently configured to cast
 		bytes() into str() and return the list with its elements changed accordingly."""
 		
-		if raw is None:
-			raw = self.raw
-		if raw:
+		if self.raw(raw):
 			return byteStringList
 		else:
 			return [byteString.decode() for byteString in byteStringList]
 	
 	def getName(self, raw=None):
 		"""Name of the process without arguments."""
-		return self._typeString(self.info.comm, raw)
+		return self._typeString(self.info.comm, raw=self.raw(raw))
 	
 	def getPath(self, raw=None):
 		"""Executable path as it's found in the first element of the argv."""
-		return self.getArgv(raw=raw)[0]
+		return self.getArgv(raw=self.raw(raw))[0]
 	
 	def getPid(self):
 		"""PID of the process. Returns as int."""
@@ -272,13 +281,13 @@ class ExternalLinuxProcess(object):
 	def getArgvSplitByNul(self, raw=None):
 		"""List of arguments used to start the process, starting with the command name.
 		Args are split into a list by NUL."""
-		return self._typeList(self.info.cmdline.split(b"\x00"), raw)
+		return self._typeList(self.info.cmdline.strip(b"\x00").split(b"\x00"), raw=self.raw(raw))
 	
-	def getArgv(self, raw=None, splitArgs=False, withComm=True):
+	def getArgv(self, raw=None, splitArgs=None, withComm=True):
 		"""List of arguments used to start the process, starting with the command name.
 		Args are split into a list by NUL, and, optionally, by equal sign."""
-		argv = Argv(self.getArgvSplitByNul(raw=raw), raw=raw, withComm=withComm)
-		if splitArgs:
+		argv = Argv(self.getArgvSplitByNul(raw=self.raw(raw)), raw=self.raw(raw), withComm=withComm)
+		if self.splitArgs(splitArgs):
 			return argv.withArgsSplit
 		else:
 			return argv.args
@@ -286,18 +295,12 @@ class ExternalLinuxProcess(object):
 	def hasArg(self, arg, raw=None, splitArgs=None):
 		"""Is the specified arg in the processes argv?
 		Returns True if it is, False if it's not."""
-		#print("argv: ", self.getArgv(raw=raw, splitArgs=splitArgs, withComm=False)) #NOTE: DEBUG
-		return arg in self.getArgv(raw=raw, splitArgs=splitArgs, withComm=False)
+		return arg in self.getArgv(raw=self.raw(raw), splitArgs=self.splitArgs(splitArgs), withComm=False)
 
 	def inArg(self, string, raw=None, splitArgs=None):
 		"""Is the specified substring in one of the args in argv?
 		Returns True if it is, False if it's not."""
-		#NOTE: DEBUG
-		#dprint("Testline", "||".join([str(argv) for argv in self.getArgv(raw=raw, splitArgs=splitArgs)]))
-		#if "kchai" in "||".join( [str(argv) for argv in self.getArgv(raw=raw, splitArgs=splitArgs)] ):
-		#	dprint("[!!!] argv:", self.getArgv(raw=False))
-		#dprint([arg for arg in self.getArgv(raw=raw, splitArgs=splitArgs)])
-		return any([arg for arg in self.getArgv(raw=raw, splitArgs=splitArgs) if string in arg])
+		return any([arg for arg in self.getArgv(raw=self.raw(raw), splitArgs=self.splitArgs(splitArgs)) if string in arg])
 
 # TODO: Windows/MacOS X support, if that should ever
 # be required.
