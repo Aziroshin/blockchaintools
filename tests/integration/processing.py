@@ -3,6 +3,7 @@
 #=======================================================================================
 
 from subprocess import Popen, PIPE
+import os
 import unittest
 import random
 import string
@@ -78,14 +79,27 @@ class ProcessingTestCase(unittest.TestCase):
 		"""Value of the test-argument of the process we're testing against."""
 		return "{prefix}_value_{identifier}"\
 			.format(prefix=type(self).prefix, identifier=self.testProcessIdentifier)
-		
+	
+	@property
+	def testProcessEnvVarName(self):
+		return "{prefix}_envVarName_{identifier}"\
+			.format(prefix=type(self).prefix, identifier=self.testProcessIdentifier)
+	
+	@property
+	def testProcessEnvVarValue(self):
+		return "{prefix}_envVarValue_{identifier}"\
+			.format(prefix=type(self).prefix, identifier=self.testProcessIdentifier)
+	
 	@property
 	def testProcess(self):
 		"""The process we'll be testing against."""
+		envDict = dict(os.environ)
+		envDict[self.testProcessEnvVarName] = self.testProcessEnvVarValue
 		if not hasattr(self, "_testProcess"):
 			self._testProcess = Popen(\
 			# We're simulating a somewhat complex command line here, with some blind arguments.
 			[self.testProcessExecPath, self.testProcessArgParam, self.testProcessArgValue],\
+			env=dict(os.environ),\
 			shell=False,\
 			stdout=PIPE)
 		return self._testProcess
@@ -123,17 +137,20 @@ class ProcessListTestCase(ProcessingTestCase):
 	
 	def test_byArgPart(self):
 		#"""[Test: ProcessList.byArgPart]"""
-		#print([p.name() for p in ProcessList().byArgPart("").processes])
-		#matchedProcess = ProcessList().byArgPart(self.partialTestProcessArgValue)[0]
-		#dprint()
-		#dprint("original", self.partialTestProcessArgValue)
-		#dprint("matched", [p.getArgv(raw=False) for p in ProcessList() if len([arg for arg in p.getArgv(raw=False) if "kchai" in arg]) > 0])
 		matchedProcess = ProcessList().byArgPart(self.partialTestProcessArgValue)[0]
 		self.assertEqual(matchedProcess.getPid(), self.testProcess.pid)
 		
 	def test_byArg(self):
 		matchedProcess = ProcessList().byArg(self.testProcessArgParam)[0]
 		self.assertEqual(matchedProcess.getPid(), self.testProcess.pid)
+
+class ExternalLinuxProcessTestCase(ProcessingTestCase):
+	def test_getEnvDict(self):
+		process = ProcessList().byName(self.testProcessName)[0]
+		envDict = process.getEnvDict()
+		self.assertIn(self.testProcessEnvVarName, envDict.keys)
+		self.assertIn(self.testProcessEnvVarValue, envDict.values)
+
 
 # This class gets instantiated by the "testing" script right after importing this module.
 class Testing(object):
