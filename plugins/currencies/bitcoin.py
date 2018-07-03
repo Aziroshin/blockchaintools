@@ -197,12 +197,11 @@ class BitcoinWallet(Wallet):
 		#processList = ProcessList(raw=False).byName(self.config.cliBinPath).byArg("-datadir")\
 			#.byArg(self.config.dataDirPath)
 		
-		
-		raise Exception("data dir path", self.config.dataDirPath)
 		# TODO: Recognize datadir of process started without -datadir option.
 		# Will probably need detection of HOME variable for process, just to be sure.
-	
-		#dprint("Process list:", ProcessList(raw=False).byPath(self.config.dataDirPath)[0].getPid())
+		dprint(self.config.dataDirPath)
+		dprint("Process list:", ProcessList(raw=False, splitArgs=True).byName("bitcoind").byArg("-datadir")[0].getArgv())
+		raise Exception("data dir path", self.config.dataDirPath)
 
 	def runCli(self, commandLine):
 		"""Run the command line version of the wallet with a list of command line arguments."""
@@ -355,24 +354,6 @@ class CliAction(Action):
 #END#
 #==========================================================
 
-#==========================================================
-#BEGIN# Action: cli
-
-class StopAction(Action):
-	
-	#=============================
-	"""Stops the daemon."""
-	#=============================
-	
-	def run(self):
-		wallet = Wallet(self.data.Config())
-		return CliActionReturnValue(wallet.stopDaemon(\
-			self.data.args.stopDaemonTimeout)\
-			.waitAndGetOutput(timeout=self.data.args.stopDaemonTimeout))
-
-#END#
-#==========================================================
-
 
 #==========================================================
 #BEGIN# Actions: Daemon related
@@ -389,12 +370,24 @@ class StartDaemonAction(Action):
 		return DaemonActionReturnValue(wallet.startDaemon(\
 			self.data.args.args).waitAndGetOutput(timeout=180))
 
+class StopDaemonAction(Action):
+	
+	#=============================
+	"""Stops the daemon."""
+	#=============================
+	
+	def run(self):
+		wallet = Wallet(self.data.Config())
+		return DaemonActionReturnValue(wallet.stopDaemon(\
+			self.data.args.stopDaemonTimeout)\
+			.waitAndGetOutput(timeout=self.data.args.stopDaemonTimeout))
+
 class ReindexAction(Action):
 	
 	#=============================
 	"""Runs the wallet with -reindex.
 	
-	Wraps around StopAction and CliAction and returns accordingly."""
+	Wraps around StopDaemonAction and CliAction and returns accordingly."""
 	#=============================
 	
 	def run(self):
@@ -409,7 +402,7 @@ class ReindexAction(Action):
 		# new details, but the daemon would still be initialized with the old
 		# ones. Result: RPC connection failure.
 		try:
-			returnValues.addReturnValue(StopAction(handle=self.handle, data=self.data).run())
+			returnValues.addReturnValue(StopDaemonAction(handle=self.handle, data=self.data).run())
 		except WalletError:
 			pass
 	
@@ -432,7 +425,7 @@ class BitcoinActions(Actions):
 	def setUp(self):
 		super().setUp()
 		self.add("cli", CliAction)
-		self.add("stop", StopAction)
+		self.add("stop", StopDaemonAction)
 		self.add("info", InfoAction)
 		self.add("reindex", ReindexAction)
 		self.add("start", StartDaemonAction)
