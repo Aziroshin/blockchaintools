@@ -120,7 +120,7 @@ class LinuxProcessList(UserList):
 		Path in this case refers to the path of the executable, represented
 		as the first element of the processes' argv."""
 		return type(self)(processes=\
-			[p for p in self if p.getPath(raw) == path],\
+			[p for p in self if p.getPath(raw=raw) == path],\
 			initWithAll=False)
 	
 	def byArg(self, arg, raw=None, splitArgs=None):
