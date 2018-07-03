@@ -17,6 +17,13 @@ from lib.debugging import dprint #NOTE: DEBUG
 #=======================================================================================
 
 ProcessOutput = namedtuple("ProcessOutput", ["stdout", "stderr"], verbose=False, rename=False)
+# SplitPair
+SplitPair = namedtuple("SplitPair", ["key", "value"], verbose=False, rename=False)
+UnsplitPair = namedtuple("UnsplitPair", ["key"], verbose=False, rename=False)
+# SplitVar
+SplitVar = namedtuple("SplitVar", ["var", "value"], verbose=False, rename=False)
+UnsplitVar = namedtuple("UnsplitVar", ["var"], verbose=False, rename=False)
+# SplitArg
 SplitArg = namedtuple("SplitArg", ["param", "value"], verbose=False, rename=False)
 UnsplitArg = namedtuple("UnsplitArg", ["param"], verbose=False, rename=False)
 
@@ -168,41 +175,79 @@ class LinuxProcessInfo(object):
 			return None
 
 #=========================================================
-class Arg(object):
-	def __init__(self, value, raw):
+class Pair(object):
+	
+	"""Equal-sign separated key/value pair in its split and unsplit form."""
+	
+	def __init__(self, value, raw, SplitType, UnsplitType):
 		self.value = value
 		self.raw = raw
+		self.SplitType = SplitType
+		self.UnsplitType = UnsplitType
 		if self.raw:
 			self.equalSign = b"="
 		else:
 			self.equalSign = "="
-		
+	
+	@property
 	def split(self):
-		"""If applicable, splits the argument by equal sign and returns SplitArg.
-		Otherwise, returns UnsplitArg with the entire argument as its one value."""
-		param, value = self.value.partition(self.equalSign)[0::2]
+		"""If applicable, splits the pair by equal sign and returns the specified SplitType.
+		Otherwise, returns UnsplitType with the entire argument as its one value."""
+		key, value = self.value.partition(self.equalSign)[0::2]
 		if value:
-			return SplitArg(param, value)
+			return self.SplitType(key, value)
 		else:
-			return UnsplitArg(self.value)
+			return self.UnsplitType(self.value)
 
 #=========================================================
-class Argv(object):
-	def __init__(self, argv, raw, withComm=True):
-		if not withComm: argv.pop(0)
-		self.args = argv
+class KeyValueData(object):
+	
+	"""A set of equal-sign separated key/value pairs in their split and unsplit forms.
+	.split returns a list of SplitPair(key, value) and UnsplitPair(key)."""
+	
+	SplitType = SplitPair
+	UnsplitType = UnsplitPair
+	
+	def __init__(self, data, raw):
+		self.data = data
 		self.raw = raw
 		
 	@property
-	def withArgsSplit(self):
-		"""Returns a list with all arguments split by equal sign, where applicable.
+	def unsplit(self):
+		return self.data
+		
+	@property
+	def split(self):
+		"""Returns a list with all key/value pairs split by equal sign, where applicable.
 		Doesn't split if the left hand side includes non-alphanumeric characters, except
 		dashes, in order not to mess with quoted strings, shell variables and subshells, etc."""
-		argv = []
-		for arg in self.args:
-			for element in Arg(value=arg, raw=self.raw).split():
-				argv.append(element)
-		return argv
+		data = []
+		for pair in self.data:
+			for element in Pair(pair, self.raw, type(self).SplitType, type(self).UnsplitType).split:
+				data.append(element)
+		return data
+
+#=========================================================
+class Argv(KeyValueData):
+	
+	"""The argv of a process, optionally with equal sign seperated args split.
+	.split returns a list of splitArg(param, value) and UnsplitArg(param)."""
+	
+	SplitType = SplitArg
+	UnsplitType = UnsplitArg
+	
+	def __init__(self, data, raw, withComm=True):
+		if not withComm: data.pop(0)
+		super().__init__(data, raw)
+		
+#=========================================================
+class Env(KeyValueData):
+	
+	"""The environment vars of a process, optionally with equal sign separated vars split.
+	.split returns a list of SplitVar(var, value) and UnsplitVar(var)."""
+	
+	SplitType = SplitVar
+	UnsplitType = UnsplitVar
 
 #=========================================================
 class ExternalLinuxProcess(object):
@@ -283,14 +328,24 @@ class ExternalLinuxProcess(object):
 		Args are split into a list by NUL."""
 		return self._typeList(self.info.cmdline.strip(b"\x00").split(b"\x00"), raw=self.raw(raw))
 	
+	def getEnvSplitByNul(self, raw=None):
+		return self._typeList(self.info.environ.strip(b"\x00").split(b"\x00"), raw=self.raw(raw))
+	
 	def getArgv(self, raw=None, splitArgs=None, withComm=True):
 		"""List of arguments used to start the process, starting with the command name.
 		Args are split into a list by NUL, and, optionally, by equal sign."""
 		argv = Argv(self.getArgvSplitByNul(raw=self.raw(raw)), raw=self.raw(raw), withComm=withComm)
 		if self.splitArgs(splitArgs):
-			return argv.withArgsSplit
+			return argv.split
 		else:
-			return argv.args
+			return argv.unsplit
+	
+	def getEnv(self, raw=None, splitVars=None):
+		env = Env(self.getEnvSplitByNul(raw=self.raw(raw)), raw=self.raw(raw))
+		if self.splitVars(splitVars):
+			return env.split
+		else:
+			return env.vars
 		
 	def hasArg(self, arg, raw=None, splitArgs=None):
 		"""Is the specified arg in the processes argv?
