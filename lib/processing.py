@@ -332,7 +332,7 @@ class ExternalLinuxProcess(object):
 		return self._typeList(self.info.environ.strip(b"\x00").split(b"\x00"), raw=self.raw(raw))
 	
 	def getArgv(self, raw=None, splitArgs=None, withComm=True):
-		"""List of arguments used to start the process, starting with the command name.
+		"""List of arguments used to start the process, optionally starting with the command name.
 		Args are split into a list by NUL, and, optionally, by equal sign."""
 		argv = Argv(self.getArgvSplitByNul(raw=self.raw(raw)), raw=self.raw(raw), withComm=withComm)
 		if self.splitArgs(splitArgs):
@@ -341,12 +341,30 @@ class ExternalLinuxProcess(object):
 			return argv.unsplit
 	
 	def getEnv(self, raw=None, splitVars=None):
+		
+		"""List of environment variables.
+		Args are split into a list by NUL, and, optionally, by equal sign."""
+		
 		env = Env(self.getEnvSplitByNul(raw=self.raw(raw)), raw=self.raw(raw))
 		if self.splitVars(splitVars):
 			return env.split
 		else:
-			return env.vars
+			return env.unsplit
 		
+	def getEnvDict(self, raw=None):
+		
+		"""Dict of environment variables in key/value pairs."""
+		# We assume that every environment variable is a key value pair.
+		# This explodes otherwise.
+		
+		envDict = {}
+		env = self.getEnv(raw=self.raw(raw), splitVars=True)
+		envIndex = 0
+		while envIndex < len(env):
+			envDict[env[envIndex]] = env[envIndex+1]
+			envIndex += 2
+		return envDict
+	
 	def hasArg(self, arg, raw=None, splitArgs=None):
 		"""Is the specified arg in the processes argv?
 		Returns True if it is, False if it's not."""
