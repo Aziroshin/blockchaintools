@@ -135,6 +135,10 @@ class ProcessListTestCase(ProcessingTestCase):
 		"""This is .testProcessArgValue[4:-3]"""
 		return self.testProcessArgValue[4:-3]
 	
+	def test_byName(self):
+		matchedProcess= ProcessList().byName(self.testProcessName)[0]
+		self.assertEqual(matchedProcess.getPid(), self.testProcess.pid)
+	
 	def test_byArgPart(self):
 		#"""[Test: ProcessList.byArgPart]"""
 		matchedProcess = ProcessList().byArgPart(self.partialTestProcessArgValue)[0]

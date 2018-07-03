@@ -313,7 +313,7 @@ class ExternalLinuxProcess(object):
 	
 	def getName(self, raw=None):
 		"""Name of the process without arguments."""
-		return self._typeString(self.info.comm, raw=self.raw(raw))
+		return Path(self.getPath(raw=raw)).name
 	
 	def getPath(self, raw=None):
 		"""Executable path as it's found in the first element of the argv."""
