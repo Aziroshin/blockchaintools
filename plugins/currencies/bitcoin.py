@@ -200,7 +200,9 @@ class BitcoinWallet(Wallet):
 		# TODO: Recognize datadir of process started without -datadir option.
 		# Will probably need detection of HOME variable for process, just to be sure.
 		dprint(self.config.dataDirPath)
-		dprint("Process list:", ProcessList(raw=False, splitArgs=True).byName("bitcoind").byArg("-datadir")[0].getArgv())
+		process = ProcessList(raw=False, splitArgs=True).byName("bitcoind").byArg("-datadir")[0].getArgv()
+		dprint("Process list:", process)
+		dprint("Process env:", process.env)
 		raise Exception("data dir path", self.config.dataDirPath)
 
 	def runCli(self, commandLine):
