@@ -22,7 +22,7 @@ SplitPair = namedtuple("SplitPair", ["key", "value"], verbose=False, rename=Fals
 UnsplitPair = namedtuple("UnsplitPair", ["key"], verbose=False, rename=False)
 # SplitVar
 SplitVar = namedtuple("SplitVar", ["var", "value"], verbose=False, rename=False)
-UnsplitVar = namedtuple("UnsplitVar", ["var"], verbose=False, rename=False)
+UnsplitVar = namedtuple("UnsplitVar", ["var", "value"], verbose=False, rename=False)
 # SplitArg
 SplitArg = namedtuple("SplitArg", ["param", "value"], verbose=False, rename=False)
 UnsplitArg = namedtuple("UnsplitArg", ["param"], verbose=False, rename=False)
@@ -43,7 +43,7 @@ class NoSuchProcessError(Exception): pass
 # processes that we start
 #=========================================================
 
-#==========================================================
+#=========================================================
 class Process(object):
 
 	#=============================
@@ -156,6 +156,7 @@ class LinuxProcessInfo(object):
 			self.cmdline = self._readProc(["cmdline"])
 			self.comm = self._readProc(["comm"])
 			self.cwd = self._resolveSymlink(["cwd"])
+			self.environ = self._readProc(["environ"])
 		except FileNotFoundError:
 			raise NoSuchProcessError("A process with the PID {0} doesn't exist (anymore?)."\
 				.format(self.pid))
@@ -177,13 +178,25 @@ class LinuxProcessInfo(object):
 #=========================================================
 class Pair(object):
 	
-	"""Equal-sign separated key/value pair in its split and unsplit form."""
+	"""Equal-sign separated key/value pair in its split and unsplit form.
 	
-	def __init__(self, value, raw, SplitType, UnsplitType):
+	Takes:
+		- value: Bytestring or string potentially containing an equal sign separated
+		  key/value pair.
+		- raw: True value is a bytestring, False for string.
+		- unsplitFiller (None): If not None, .split uses the value specified here for
+		  a substitute if value is either not an equal sign separated key/value pair
+		  or doesn't contain an rvalue.
+		  A KeyValueDataError is raised if the UnsplitType for this class
+		  doesn't take at least two items."""
+	#NOTE: Consider merging Pair into KeyValueData. Too much redundancy.
+	
+	def __init__(self, value, raw, SplitType, UnsplitType, unsplitFiller=None):
 		self.value = value
 		self.raw = raw
 		self.SplitType = SplitType
 		self.UnsplitType = UnsplitType
+		self.unsplitFiller = unsplitFiller
 		if self.raw:
 			self.equalSign = b"="
 		else:
@@ -197,23 +210,52 @@ class Pair(object):
 		if value:
 			return self.SplitType(key, value)
 		else:
-			return self.UnsplitType(self.value)
+			if self.unsplitFiller is None:
+				return self.UnsplitType(self.value)
+			else:
+				try:
+					return self.UnsplitType(self.value, self.unsplitFiller)
+				except TypeError:
+					raise KeyValueDataError(\
+						"When unsplitFiller is specified, UnsplitType needs to have a size of 2."
+						"Type that caused the error: {Type}".format(Type=self.UnsplitType.__name__))
+
+#=========================================================
+class KeyValueDataError(Exception): pass
 
 #=========================================================
 class KeyValueData(object):
 	
 	"""A set of equal-sign separated key/value pairs in their split and unsplit forms.
-	.split returns a list of SplitPair(key, value) and UnsplitPair(key)."""
+	.split returns a list of SplitPair(key, value) and UnsplitPair(key).
+	
+	There are two important class attributes you might want to consider when subclassing:
+		- SplitType (SplitPair): A 2-tuple returned by .split for elements in the specified
+		  data list that could be split.
+		- UnsplitType (UnsplitPair): A tuple of either size 1 or 2. Size 2 is required when
+		  unsplitFiller is specified. Is used for the return value of .split for
+		  elements of the specified data list that couldn't be split.
+	This class is designed with namedtuples in mind.
+	
+	Takes:
+		- data: List potentally containing equal-sign separated key-value pairs.
+		- raw: True if data is in bytestrings, False for strings.
+		- unsplitFiller (None): If not None, substitutes the missing value of data elements
+		  that either have no equal sign or no rvalue with what's specified for this
+		  parameter. A KeyValueDataError is raised if the UnsplitType for this class
+		  doesn't take at least two items."""
 	
 	SplitType = SplitPair
 	UnsplitType = UnsplitPair
 	
-	def __init__(self, data, raw):
+	def __init__(self, data, raw, unsplitFiller=None):
 		self.data = data
 		self.raw = raw
+		self.unsplitFiller = unsplitFiller
 		
 	@property
 	def unsplit(self):
+		"""Get the unsplit data this object was initialized with."""
 		return self.data
 		
 	@property
@@ -223,8 +265,13 @@ class KeyValueData(object):
 		dashes, in order not to mess with quoted strings, shell variables and subshells, etc."""
 		data = []
 		for pair in self.data:
-			for element in Pair(pair, self.raw, type(self).SplitType, type(self).UnsplitType).split:
+			
+			for element in\
+			Pair(pair, self.raw, type(self).SplitType, type(self).UnsplitType,\
+			unsplitFiller=self.unsplitFiller).split:
+				
 				data.append(element)
+				
 		return data
 
 #=========================================================
@@ -248,7 +295,10 @@ class Env(KeyValueData):
 	
 	SplitType = SplitVar
 	UnsplitType = UnsplitVar
-
+	
+	def __init__(self, data, raw):
+		super().__init__(data, raw, unsplitFiller="")
+		
 #=========================================================
 class ExternalLinuxProcess(object):
 	
@@ -259,13 +309,20 @@ class ExternalLinuxProcess(object):
 	
 	The basic assumption is that the process was originally started by something
 	else, thus some functionality one could expect from the Process class will
-	not be available."""
+	not be available.
+	
+	Takes:
+		- pid: PID of the process.
+		- raw (False): True for bytestring, False for string.
+		- splitArgs (False): True to split args by equal sign by default when applicable.
+		- splitVars (False): True to split env. vars. by equal sign by default when applicable."""
 	#=============================
 	
-	def __init__(self, pid, raw=False, splitArgs=False):
+	def __init__(self, pid, raw=False, splitArgs=False, splitVars=False):
 		self.info = LinuxProcessInfo(pid)
 		self.rawDefaultSetting = raw
 		self.splitArgsDefaultSetting = splitArgs
+		self.splitVarsDefaultSetting = splitVars
 	
 	#=============================
 	# Default overriders
@@ -280,6 +337,12 @@ class ExternalLinuxProcess(object):
 	def splitArgs(self, override):
 		if override is None:
 			return self.splitArgsDefaultSetting
+		else:
+			return override
+	
+	def splitVars(self, override):
+		if override is None:
+			return self.splitVarsDefaultSetting
 		else:
 			return override
 		
@@ -360,7 +423,10 @@ class ExternalLinuxProcess(object):
 		envDict = {}
 		env = self.getEnv(raw=self.raw(raw), splitVars=True)
 		envIndex = 0
+		#dprint(len(env))
+		dprint(self.getEnv(raw=raw))
 		while envIndex < len(env):
+			#dprint(envIndex, env[envIndex], env[envIndex+1])
 			envDict[env[envIndex]] = env[envIndex+1]
 			envIndex += 2
 		return envDict
