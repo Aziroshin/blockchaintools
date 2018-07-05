@@ -324,6 +324,11 @@ class ExternalLinuxProcess(object):
 		self.splitArgsDefaultSetting = splitArgs
 		self.splitVarsDefaultSetting = splitVars
 	
+	# Convenience.
+	@property
+	def pid(self):
+		return self.info.pid
+	
 	#=============================
 	# Default overriders
 	
@@ -429,7 +434,6 @@ class ExternalLinuxProcess(object):
 			#dprint(envIndex, env[envIndex], env[envIndex+1])
 			envDict[env[envIndex]] = env[envIndex+1]
 			envIndex += 2
-		return envDict
 	
 	def hasArg(self, arg, raw=None, splitArgs=None):
 		"""Is the specified arg in the processes argv?
