@@ -135,8 +135,12 @@ class ProcessListTestCase(ProcessingTestCase):
 		"""This is .testProcessArgValue[4:-3]"""
 		return self.testProcessArgValue[4:-3]
 	
+	def test_byPid(self):
+		matchedProcess = ProcessList().byPid(self.testProcess.pid)
+		self.assertEqual(self.testProcess.pid, matchedProcess[0].pid)
+	
 	def test_byName(self):
-		matchedProcess= ProcessList().byName(self.testProcessName)[0]
+		matchedProcess = ProcessList().byName(self.testProcessName)[0]
 		self.assertEqual(matchedProcess.getPid(), self.testProcess.pid)
 	
 	def test_byArgPart(self):
@@ -151,7 +155,7 @@ class ProcessListTestCase(ProcessingTestCase):
 class ExternalLinuxProcessTestCase(ProcessingTestCase):
 	def test_getEnvDict(self):
 		process = ProcessList().byName(self.testProcessName)[0]
-		envDict = process.getEnvDict()
+		envDict = process.env
 		self.assertIn(self.testProcessEnvVarName, envDict.keys())
 		self.assertIn(self.testProcessEnvVarValue, envDict.values())
 

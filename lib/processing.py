@@ -109,6 +109,12 @@ class LinuxProcessList(UserList):
 				pass
 		return processes
 	
+	def byPid(self, pid):
+		"""Returns the process matching the specified PID."""
+		return type(self)(processes=\
+			[p for p in self if p.pid == pid],\
+			initWithAll=False)
+	
 	def byName(self, name, raw=None):
 		"""Return type(self) object of all processes matching the specified name."""
 		return type(self)(processes=\
@@ -327,7 +333,19 @@ class ExternalLinuxProcess(object):
 	# Convenience.
 	@property
 	def pid(self):
-		return self.info.pid
+		return self.getPid()
+	
+	@property
+	def name(self):
+		return self.getName()
+		
+	@property
+	def path(self):
+		return self.getPath()
+	
+	@property
+	def env(self):
+		return self.getEnvDict()
 	
 	#=============================
 	# Default overriders
