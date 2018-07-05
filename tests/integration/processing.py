@@ -99,7 +99,7 @@ class ProcessingTestCase(unittest.TestCase):
 			self._testProcess = Popen(\
 			# We're simulating a somewhat complex command line here, with some blind arguments.
 			[self.testProcessExecPath, self.testProcessArgParam, self.testProcessArgValue],\
-			env=dict(os.environ),\
+			env=envDict,\
 			shell=False,\
 			stdout=PIPE)
 		return self._testProcess
@@ -152,8 +152,8 @@ class ExternalLinuxProcessTestCase(ProcessingTestCase):
 	def test_getEnvDict(self):
 		process = ProcessList().byName(self.testProcessName)[0]
 		envDict = process.getEnvDict()
-		self.assertIn(self.testProcessEnvVarName, envDict.keys)
-		self.assertIn(self.testProcessEnvVarValue, envDict.values)
+		self.assertIn(self.testProcessEnvVarName, envDict.keys())
+		self.assertIn(self.testProcessEnvVarValue, envDict.values())
 
 
 # This class gets instantiated by the "testing" script right after importing this module.

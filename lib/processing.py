@@ -400,8 +400,10 @@ class ExternalLinuxProcess(object):
 		return self._typeList(self.info.environ.strip(b"\x00").split(b"\x00"), raw=self.raw(raw))
 	
 	def getArgv(self, raw=None, splitArgs=None, withComm=True):
+		
 		"""List of arguments used to start the process, optionally starting with the command name.
 		Args are split into a list by NUL, and, optionally, by equal sign."""
+		
 		argv = Argv(self.getArgvSplitByNul(raw=self.raw(raw)), raw=self.raw(raw), withComm=withComm)
 		if self.splitArgs(splitArgs):
 			return argv.split
@@ -428,12 +430,10 @@ class ExternalLinuxProcess(object):
 		envDict = {}
 		env = self.getEnv(raw=self.raw(raw), splitVars=True)
 		envIndex = 0
-		#dprint(len(env))
-		dprint(self.getEnv(raw=raw))
 		while envIndex < len(env):
-			#dprint(envIndex, env[envIndex], env[envIndex+1])
 			envDict[env[envIndex]] = env[envIndex+1]
 			envIndex += 2
+		return envDict
 	
 	def hasArg(self, arg, raw=None, splitArgs=None):
 		"""Is the specified arg in the processes argv?
