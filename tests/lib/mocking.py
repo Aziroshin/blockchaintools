@@ -6,6 +6,7 @@
 import tempfile
 import random
 import string
+import os
 from pathlib import Path
 from subprocess import Popen, PIPE
 
@@ -73,18 +74,18 @@ class DummyProcess(object):
 		That's why executing these tests would be best done in a dedicated environment.
 		"""
 		
-		if not hasattr(self, "__identifier"):
-			self.__identifier = "".join(random.SystemRandom().choice(\
+		if not hasattr(self, "_identifier"):
+			self._identifier = "".join(random.SystemRandom().choice(\
 				string.ascii_uppercase+string.ascii_lowercase+string.digits)\
 					for i in range(0,64))
-		return self.__identifier
+		return self._identifier
 	
 	@property
 	def tempDir(self):
 		"""Will hold the executable for the process we'll test against."""
-		if not hasattr(self, "__tempDir"):
-			self.__tempDir = tempfile.TemporaryDirectory()
-		return self.__tempDir
+		if not hasattr(self, "_tempDir"):
+			self._tempDir = tempfile.TemporaryDirectory()
+		return self._tempDir
 	
 	@property
 	def name(self):
@@ -106,12 +107,12 @@ class DummyProcess(object):
 	def sourcePath(self):
 		"""Path to the source code for the executable of the process well test against.
 		This just adds ".c" to .execPath."""
-		if self.__sourcePath is None:
-			self.__sourcePath = self.defaultSourcePath
-		return self.__sourcePath
+		if self._sourcePath is None:
+			self._sourcePath = self.defaultSourcePath
+		return self._sourcePath
 	@sourcePath.setter
 	def sourcePath(self, path):
-		self.__sourcePath = path
+		self._sourcePath = path
 	
 	@property
 	def defaultSourceCode(self):
@@ -132,20 +133,20 @@ class DummyProcess(object):
 			- If writeSourceFile is False, read from source file"""
 		
 		# Get source code.
-		if self.__sourceCode is None:
+		if self._sourceCode is None:
 			if self.writeSourceFile:
-				self.__sourceCode = self.defaultSourceCode
+				self._sourceCode = self.defaultSourceCode
 			else:
-				self.__sourceCode = self.sourceCodeFromFile
+				self._sourceCode = self.sourceCodeFromFile
 		
 		# Validate source code and return or error.
-		if self.sourceCodeValid(self.__sourceCode):
-			return self.__sourceCode
+		if self.sourceCodeValid(self._sourceCode):
+			return self._sourceCode
 		else:
 			raise MockError("Invalid source code found.")
 	@sourceCode.setter
 	def sourceCode(self, sourceCode):
-		self.__sourceCode = sourceCode
+		self._sourceCode = sourceCode
 	
 	@property
 	def argParam(self):
