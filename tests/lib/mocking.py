@@ -202,12 +202,9 @@ class DummyProcess(object):
 			
 	def compileExec(self):
 		# TODO: Make sure doesn't hang
-		dprint("Exists", os.path.exists(self.sourcePath), self.sourcePath)
-		dprint("execPath:", self.execPath)
 		stdout, stderr = [output.decode() for output in\
 			Popen(["gcc", self.sourcePath, "-o", self.execPath],\
 			stdout=PIPE, stderr=PIPE).communicate()]
-		dprint("Exists", os.path.exists(self.sourcePath), self.sourcePath)
 		if len(stdout) > 0 or len(stderr) > 0:
 			raise MockError(\
 				"Ad-hoc compilation failed: \n[gcc stdout]:\n{stdout}\n[gcc stderr]:\n{stderr}\n"\
