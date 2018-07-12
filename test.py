@@ -207,16 +207,31 @@ class TestingArguments(Arguments):
 		Upon calling --help, we'll also list all the available modules from the testing directory."""
 		
 		self.parser.add_argument("-a", "--all", action="store_false",help="Run all tests")
-		self.parser.add_argument("tests", nargs='?', default=None, help=\
+		self.parser.add_argument("tests", nargs='*', default=None, help=\
 			"There are two parameters, the first being the type of test, the second the"
 			"name of the test."
 			"Test types: {unit, integration}"
 			"Example: test.py integration processing")
 		
-	def get(self):
-		args = super().get()
-		args.types, args.modules = TestParameterValues(args.tests)
-		return args
+	#def get(self):
+		#args = super().get()
+		#args.types = []
+		#args.modules = []
+		#args.specifiedType = None
+		#args.specifiedModule = None
+		#if args.tests is None:
+			#args.types, args.modules = TestParameterValues(args.tests)
+		#elif len(args.tests) > 0:
+			## Type speified. Set type accordingly and look whether a module has been specified too.
+			#args.types.append(args.tests[0])
+			#args.typeSpecified = True
+			#if len(args.tests) == 2:
+				## Type and module specified.
+				#args.modules.append(args.tests[1])
+			#else:
+				## Type specified, but no module. Run all.
+				#args.modules.append(Tests(TESTS_DIR)[args.types[0]])
+		#return args
 
 def runModule(testType, module):
 	chosenModule = __import__(name="tests.{testType}.{moduleName}"\
@@ -245,5 +260,15 @@ def runModules(types, modules):
 if __name__ == "__main__":
 	
 	args = TestingArguments().get()
+	tests = Tests(TESTS_DIR)
 	import vivo
-	runModules(args.types, args.modules)
+	if len(args.tests) == 0:
+		for testType in tests:
+			for module in tests[testType]:
+				runModule(testType, module)
+	else:
+		if len(args.tests) == 2:
+			runModule(args.tests[0], args.tests[1])
+		else:
+			for module in tests[args.tests[0]]:
+				runModule(args.tests[0], module)
