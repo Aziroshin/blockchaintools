@@ -84,13 +84,13 @@ class ExternalLinuxProcessTestCase(ProcessingTestCase):
 		self.assertIn(self.testProcess.envVarValue, envDict.values())
 
 
-# This class gets instantiated by the "testing" script right after importing this module.
-class Testing(object):
-	def run(self):
-		ProcessListTestCase()
-		suite = unittest.TestSuite([ProcessListTestCase()])
-		runner = unittest.TextTestRunner()
-		runner.run(suite)
+## This class gets instantiated by the "testing" script right after importing this module.
+#class Testing(object):
+	#def run(self):
+		#ProcessListTestCase()
+		#suite = unittest.TestSuite([ProcessListTestCase()])
+		#runner = unittest.TextTestRunner()
+		#runner.run(suite)
 		
 if __name__ == "__main__":
 	unittest.main()
