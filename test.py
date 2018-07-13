@@ -28,7 +28,7 @@ from lib.debugging import dprint
 #=======================================================================================
 
 TESTS_DIR = str(Path(Path(__file__).absolute().parent, "tests"))
-IGNORED_DIRS = ["lib", "__pycache__"]
+IGNORED_DIRS = ["data", "lib", "__pycache__"]
 
 #=======================================================================================
 # Library
