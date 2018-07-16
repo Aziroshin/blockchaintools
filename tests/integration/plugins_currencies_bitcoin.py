@@ -11,6 +11,9 @@ from pathlib import Path
 # Local
 from tests.lib.mocking import DummyProcess
 
+# What's to be tested.
+from plugins.currencies.bitcoin import BitcoinWallet
+
 #=======================================================================================
 # Configuration
 #=======================================================================================
@@ -69,29 +72,28 @@ class BitcoinTestCase(unittest.TestCase):
 	prefix = "blockchaintools_test"
 	
 	@property
-	def bitcoindSourcePath(self):
+	def mockDaemonSourcePath(self):
 		return Path(DATA_DIR, "bitcoind.c")
 	
 	@property
-	def bitcoinCliSourcePath(self):
+	def mockCliSourcePath(self):
 		return Path(DATA_DIR, "bitcoin-cli.c")
 	
 	@property
 	def homeDirPath(self):
-		return Path(DATA_DIR, "default-home"))
+		return Path(DATA_DIR, "default-home")
 	
 	def __init__(self, methodName="runTest"):
 		super().__init__(methodName)
-		self.testDaemonProcess = BitcoinDaemonMockProcess(sourcePath=str(self.bitcoindSourcePath),\
+		self.testDaemonProcess = BitcoinDaemonMockProcess(sourcePath=str(self.mockDaemonSourcePath),\
 			homeDirSourcePath=str(self.homeDirPath))
-		self.testCliProcess = BitcoinCliMockProcess(sourcePath=str(self.bitcoinCliSourcePath),\
+		self.testCliProcess = BitcoinCliMockProcess(sourcePath=str(self.mockCliSourcePath),\
 			homeDirSourcePath=str(self.homeDirPath))
-		
-	def setUp(self):
-		self.testDaemonProcess.start()
-	
-	def tearDown(self):
-		self.testDaemonProcess.stop()
+
+#class BitcoinDaemonTestCase(BitcoinTestCase):
+	#def test_start(self):
+		#pass#TODO
+		#BitcoinWallet(basePaths=Path(self.testDaemonProcess.execPath).parent)
 
 if __name__ == "__main__":
 	unittest.main()
