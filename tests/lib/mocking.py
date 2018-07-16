@@ -32,23 +32,30 @@ class DummyProcess(object):
 	Takes:
 		- prefix: Prepended to the binary name for easier human identification and
 		    debugging.
-		- sourceCode: The source code for the ad-hoc compiled binary.
-		- sourcePath: Path of the source file to read from and/or write to.
+		- sourceCode (string): The source code for the ad-hoc compiled binary.
+		- sourcePath (string): Path of the source file to read from and/or write to.
 		    If writeSourceFile is True, will write specified or default source code
 		    to this location, otherwise it'll just read from it (default if sourcePath
 		    is specified).
-		- writeSourceFile: Whether to use default or specified source code (True),
+		- writeSourceFile (bool): Whether to use default or specified source code (True),
 		    or simply read from the source file (False). If sourcePath is
 		    specified it will default to False, otherwise to True.
+		- args (list): List of command line args to pass to the process when
+		  no args are specified to .start. Will be assigned to .standardArgs.
+		  If None, will substitute with .defaultArgs.
 		    
 	If the ad-hoc compilation source code is found to be invalid, MockError will
 	be raised. At the moment, it only checks for length, not actual code validity."""
 	
-	def __init__(self, prefix, sourceCode=None, sourcePath=None, writeSourceFile=None):
+	def __init__(self, prefix, sourceCode=None, sourcePath=None, writeSourceFile=None, args=None):
 		
 		self.prefix = prefix
 		self.sourcePath = sourcePath
 		self.sourceCode = sourceCode
+		if args is None:
+			self.standardArgs = self.defaultArgs
+		else:
+			self.standardArgs = args
 		
 		# writeSourceFile
 		if writeSourceFile is None:
@@ -58,6 +65,12 @@ class DummyProcess(object):
 				self.writeSourceFile = False
 		else: # We're told to overwrite. Do it.
 			self.writeSourceFile = writeSourceFile
+	
+	@property
+	def defaultArgs(self):
+		"""Default args to the dummy process. A list that will eventually be passed to Popen.
+		Primarily intended to be overriden in subclasses as needed."""
+		return []
 	
 	@property
 	def pid(self):
@@ -173,17 +186,49 @@ class DummyProcess(object):
 	
 	@property
 	def process(self):
-		"""The process we'll be testing against."""
+		"""The process we'll be testing against.
+		If it hasn't been initialized yet, we'll do that with the standard arguments
+		as specified upon instantiation, or default to .defaultArgs."""
+		if not self.processInitialized:
+			self._process = self.initProcess(self.argsToRun())
+		return self._process
+	
+	@property
+	def processInitialized(self):
+		"""Returns True if the process has already been initialized, False otherwise."""
+		return hasattr(self, "_process")
+	
+	@process.setter
+	def process(self, process):
+		"""Set the dummy process that's been initializd. Raise MockError if that's already happened."""
+		if not self.processInitialized:
+			self._process = process
+		else:
+			raise MockError("Tried initializing DummyProcess more than once.")
+	
+	def argsToRun(self, args=None):
+		"""Evaluates the specified args and returns accordingly.
+		If None are specified, returns the args specified upon instantiation."""
+		#dprint("args:", args)
+		if not args is None:
+			#dprint("args not none")
+			return args
+		else:
+			#dprint("args none, assign: {0}".format(self.standardArgs))
+			return self.standardArgs
+	
+	def initProcess(self, args):
+		"""Start the process.
+		Takes:
+			- args: List of command line arguments as would be passed to subprocessing.Popen."""
 		envDict = dict(os.environ)
 		envDict[self.envVarName] = self.envVarValue
-		if not hasattr(self, "_process"):
-			self._process = Popen(\
+		self.process = Popen(\
 			# We're simulating a somewhat complex command line here, with some blind arguments.
-			[self.execPath, self.argParam, self.argValue],\
+			[self.execPath]+args,\
 			env=envDict,\
 			shell=False,\
-			stdout=PIPE)
-		return self._process
+			stdout=PIPE, stderr=PIPE, stdin=PIPE)
 	
 	def sourceCodeValid(self, sourceCode):
 		"""Checks whether the source code is long enough to even remotely qualify as functional."""
@@ -211,15 +256,20 @@ class DummyProcess(object):
 				.format(stdout=stdout, stderr=stderr))
 		Path(self.execPath).chmod(0o700)
 		
-	def start(self):
-		
+	def start(self, args=None):
 		"""Compile and start test process."""
 		self.prepareSourceFile()
 		self.compileExec()
-		self.process # Starts process.
+		self.initProcess(self.argsToRun(args)) # Starts process.
 		
 	def stop(self):
-		# Kill process.
+		"""End the process."""
+		# NOTE: If we want to test responses to different signals, we should add a method
+		# for that. This here method is supposed to deal with the end of the process in
+		# the way it's expected to happen when the actual test is wrapped up, including
+		# clean-up.
+		
+		# Kill process & wait.
 		self.process.kill()
 		self.process.communicate()
 		# Remove directory

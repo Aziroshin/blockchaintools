@@ -24,13 +24,19 @@ import time
 # Tests
 #=======================================================================================
 
+class ProcessingDummyProcess(DummyProcess):
+	
+	@property
+	def defaultArgs(self):
+		return [self.argParam, self.argValue]
+
 class ProcessingTestCase(unittest.TestCase):
 	
 	prefix = "blockchaintools_test"
 	
 	def __init__(self, methodName="runTest"):
 		super().__init__(methodName)
-		self.testProcess = DummyProcess(prefix="blockchaintools_test")
+		self.testProcess = ProcessingDummyProcess(prefix="blockchaintools_test")
 	
 	def setUp(self):
 		# Start test.
