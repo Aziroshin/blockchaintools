@@ -8,6 +8,7 @@
 import os
 import shutil
 import time
+from pathlib import Path
 
 # Local
 from lib.currencies import CurrencyConfig, Wallet, WalletError
@@ -44,6 +45,10 @@ class BitcoinConfig(CurrencyConfig):
 			Name of the daemon binary.
 		dataDirName: (string)
 			Name of the datadir.
+		dataDirBaseDirPath: (string)
+			Path to the directory the datadir is expected to reside in.
+		dataDirPath: (string)
+			The datadir path directly
 	
 	Regarding paths, determine which base path contains the cli and daemon bin.
 	We also try to locate at least the default datadir directory.
@@ -68,6 +73,7 @@ class BitcoinConfig(CurrencyConfig):
 	defaultTxBinName = "{0}-tx".format(defaultFileBaseName)
 	defaultQtBinName = "{0}-qt".format(defaultFileBaseName)
 	defaultDataDirName = ".{0}".format(defaultFileBaseName)
+	defaultDataDirBaseDirPath = os.path.expanduser("~")
 	defaultConfigFileName = "{0}.conf".format(defaultFileBaseName)
 	defaultRpcHost = "localhost"
 	defaultRpcPort = "8332" # Example of string usage when it could have been int.
@@ -75,9 +81,12 @@ class BitcoinConfig(CurrencyConfig):
 	
 	def __init__(self, basePaths=defaultBasePaths, cliBinName=defaultCliBinName,\
 		daemonBinName=defaultDaemonBinName, dataDirName=defaultDataDirName,\
+		dataDirBaseDirPath=defaultDataDirBaseDirPath, dataDirPath=None,\
 		configFileName=defaultConfigFileName, txBinName=defaultTxBinName,\
 		qtBinName=defaultQtBinName, host=defaultRpcHost, port=defaultRpcPort):
+		
 		self.basePaths = basePaths
+		self.dataDirBaseDirPath = dataDirBaseDirPath
 		self.cliBinName = cliBinName
 		self.daemonBinName = daemonBinName
 		self.txBinName = txBinName
@@ -86,6 +95,16 @@ class BitcoinConfig(CurrencyConfig):
 		self.configFileName = configFileName
 		self.rpcHost = host
 		self.rpcPort = port
+		
+		if dataDirPath:
+			self.dataDirBaseDirPath = dataDirBaseDirPath
+			self.dataDirName = dataDirName
+			self.dataDirPath = dataDirPath
+		else:
+			dataDirPathObject = Path(self.dataDirBaseDirPath, self.dataDirName)
+			self.dataDirBaseDirPath = dataDirPathObject.parent
+			self.dataDirName = dataDirPathObject.name
+			self.dataDirPath = str(dataDirPathObject)
 	
 	@property
 	def cliBinPath(self):
@@ -98,10 +117,6 @@ class BitcoinConfig(CurrencyConfig):
 	@property
 	def configFilePath(self):
 		return self.findFile(self.configFileName)
-
-	@property
-	def dataDirPath(self):
-		return os.path.join(os.path.expanduser("~"), self.dataDirName)
 
 	def findFile(self, fileName):
 		"""Locate a file given the fileName.

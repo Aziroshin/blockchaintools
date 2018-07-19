@@ -45,33 +45,41 @@ class NoSuchProcessError(Exception): pass
 
 #=========================================================
 class Process(object):
-
+	
 	#=============================
 	"""Represents a system process started by this script.
 	Note: Refrain from calling .communicate() directly on the process from outside of this object."""
 	#=============================
-
-	def __init__(self, commandLine, run=True):
+	
+	def __init__(self, commandLine, run=True, env=None):
+		
 		self.commandLine = commandLine
+		
 		if run == True:
 			self.run()
 		self._communicated = False
 		self._stdout = None
 		self._stderr = None
-
+		
+		if not env is None:
+			self.env = os.environ.copy()
+			self.env.update(env)
+		else:
+			self.env = os.environ.copy()
+			
 	def run(self):
-		self.process = Popen(self.commandLine, stdout=PIPE, stderr=PIPE)
+		self.process = Popen(self.commandLine, env=self.env, stdout=PIPE, stderr=PIPE)
 		return self.process
-
+	
 	def waitAndGetOutput(self, timeout=None):
 		if not self._communicated:
 			self._stdout, self._stderr = self.process.communicate(timeout=timeout)
 			self._communicated = True
 		return ProcessOutput(self._stdout, self._stderr)
-
+	
 	def waitAndGetStdout(self, timeout=None):
 		return self.waitAndGetOutput(timeout).stdout
-
+	
 	def waitAndGetStderr(self, timeout=None):
 		return self.waitAndGetOutput(timeout).stderr
 

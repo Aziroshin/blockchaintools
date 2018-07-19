@@ -223,7 +223,7 @@ class DummyProcess(object):
 			- args: List of command line arguments as would be passed to subprocessing.Popen."""
 		envDict = dict(os.environ)
 		envDict[self.envVarName] = self.envVarValue
-		self.process = Popen(\
+		return Popen(\
 			# We're simulating a somewhat complex command line here, with some blind arguments.
 			[self.execPath]+args,\
 			env=envDict,\
