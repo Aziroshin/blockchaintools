@@ -220,7 +220,7 @@ class DummyProcess(object):
 	def initProcess(self, args):
 		"""Start the process.
 		Takes:
-			- args: List of command line arguments as would be passed to subprocessing.Popen."""
+			- args: List of command line arguments as would be passed to subprocess.Popen."""
 		envDict = dict(os.environ)
 		envDict[self.envVarName] = self.envVarValue
 		return Popen(\
