@@ -185,18 +185,19 @@ class DummyProcess(object):
 			.format(prefix=self.prefix, identifier=self.identifier)
 	
 	@property
+	def processInitialized(self):
+		"""Returns True if the process has already been initialized, False otherwise."""
+		return hasattr(self, "_process")
+	
+	@property
 	def process(self):
 		"""The process we'll be testing against.
 		If it hasn't been initialized yet, we'll do that with the standard arguments
 		as specified upon instantiation, or default to .defaultArgs."""
 		if not self.processInitialized:
-			self._process = self.initProcess(self.argsToRun())
+			dprint("MAKING NEW PROCESS")
+			self.initProcess(self.argsToRun())
 		return self._process
-	
-	@property
-	def processInitialized(self):
-		"""Returns True if the process has already been initialized, False otherwise."""
-		return hasattr(self, "_process")
 	
 	@process.setter
 	def process(self, process):
@@ -205,6 +206,10 @@ class DummyProcess(object):
 			self._process = process
 		else:
 			raise MockError("Tried initializing DummyProcess more than once.")
+	
+	@property
+	def envToRun(self):
+		return dict(os.environ).update(self.envVarName, self.envVarValue)
 	
 	def argsToRun(self, args=None):
 		"""Evaluates the specified args and returns accordingly.
@@ -219,16 +224,23 @@ class DummyProcess(object):
 	
 	def initProcess(self, args):
 		"""Start the process.
+		
 		Takes:
-			- args: List of command line arguments as would be passed to subprocess.Popen."""
-		envDict = dict(os.environ)
-		envDict[self.envVarName] = self.envVarValue
-		return Popen(\
+			- args: List of command line arguments as would be passed to subprocess.Popen.
+		
+		Returns:
+			- The current process object as returned by subprocess.Popen.
+		
+		Currently, calling this method repeatedly overwrites the reference to the previous
+		instance without any cleanup whatsoever. Handle with care."""
+		envDict = self.envToRun
+		self.process = Popen(\
 			# We're simulating a somewhat complex command line here, with some blind arguments.
 			[self.execPath]+args,\
 			env=envDict,\
 			shell=False,\
 			stdout=PIPE, stderr=PIPE, stdin=PIPE)
+		return self.process
 	
 	def sourceCodeValid(self, sourceCode):
 		"""Checks whether the source code is long enough to even remotely qualify as functional."""
@@ -270,7 +282,10 @@ class DummyProcess(object):
 		# clean-up.
 		
 		# Kill process & wait.
+		dprint("Going to kill dummy process")
 		self.process.kill()
+		dprint("Going to wait for dummy process")
 		self.process.communicate()
+		dprint("Killed dummy process")
 		# Remove directory
 		self.tempDir.cleanup()

@@ -18,6 +18,9 @@ from plugins.currencies.bitcoin import\
 	BitcoinWallet as Wallet,\
 	BitcoinConfig as Config
 
+#debug
+from lib.debugging import dprint
+
 #=======================================================================================
 # Configuration
 #=======================================================================================
@@ -44,6 +47,9 @@ class BitcoinMockProcess(DummyProcess):
 			else:
 				if self.homeDirSourcePath.exists():
 					shutil.copytree(str(self.homeDirSourcePath), str(self.homeDirPath))
+	@property
+	def envToRun(self):
+		return dict(os.environ).update({"HOME": str(Path(self.tempDir.name, "home"))})
 	
 	@property
 	def homeDirPath(self):
@@ -54,19 +60,6 @@ class BitcoinMockProcess(DummyProcess):
 	def basePath(self):
 		"""Return the path of the directory the binaries are expected to reside in."""
 		return Path(self.execPath).parent
-	
-	@property
-	def process(self):
-		envDict = dict(os.environ)
-		envDict["HOME"] = str(Path(self.tempDir.name, "home"))
-		if not hasattr(self, "_process"):
-			self._process = Popen(\
-			# We're simulating a somewhat complex command line here, with some blind arguments.
-			[self.execPath, self.argParam, self.argValue],\
-			env=envDict,\
-			shell=False,\
-			stdout=PIPE)
-		return self._process
 
 class BitcoinDaemonMockProcess(BitcoinMockProcess):
 	@property
@@ -118,6 +111,7 @@ class BitcoinDaemonTestCase(BitcoinTestCase):
 	#	wallet = self.newWalletInstance()
 	
 	def test_getDaemon(self):
+		#while True: pass
 		wallet = self.newWalletInstance()
 		wallet.getDaemon()
 
