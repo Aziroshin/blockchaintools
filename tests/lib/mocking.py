@@ -47,7 +47,8 @@ class DummyProcess(object):
 	If the ad-hoc compilation source code is found to be invalid, MockError will
 	be raised. At the moment, it only checks for length, not actual code validity."""
 	
-	def __init__(self, prefix, sourceCode=None, sourcePath=None, writeSourceFile=None, args=None):
+	def __init__(self, prefix, sourceCode=None, sourcePath=None, writeSourceFile=None, args=None,\
+		makeArgsUnique=False):
 		
 		self.prefix = prefix
 		self.sourcePath = sourcePath
@@ -55,7 +56,10 @@ class DummyProcess(object):
 		if args is None:
 			self.standardArgs = self.defaultArgs
 		else:
-			self.standardArgs = args
+			if makeArgsUnique:
+				self.standardArgs = [self.makeUnique(u) for u in args]
+			else:
+				self.standardArgs = args
 		
 		# writeSourceFile
 		if writeSourceFile is None:
@@ -208,8 +212,21 @@ class DummyProcess(object):
 			raise MockError("Tried initializing DummyProcess more than once.")
 	
 	@property
+	def envToAdd(self):
+		return {self.envVarName: self.envVarValue}
+	
+	@property
 	def envToRun(self):
-		return dict(os.environ).update(self.envVarName, self.envVarValue)
+		env = dict(os.environ)
+		env.update(self.envToAdd)
+		return env
+	
+	def makeUnique(self, arg):
+		"""Return a near-unique version of the arg.
+		Args mangled that way should be very unlikely to collide with other command lines
+		found on the system during test time."""
+		return "{prefix}_{arg}_{identifier}"\
+			.format(prefix=self.prefix, arg=arg, identifier=self.identifier)
 	
 	def argsToRun(self, args=None):
 		"""Evaluates the specified args and returns accordingly.
@@ -282,10 +299,10 @@ class DummyProcess(object):
 		# clean-up.
 		
 		# Kill process & wait.
-		dprint("Going to kill dummy process")
+		#dprint("Going to kill dummy process")
 		self.process.kill()
-		dprint("Going to wait for dummy process")
+		#dprint("Going to wait for dummy process")
 		self.process.communicate()
-		dprint("Killed dummy process")
+		#dprint("Killed dummy process")
 		# Remove directory
 		self.tempDir.cleanup()

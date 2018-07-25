@@ -32,11 +32,23 @@ class ProcessingDummyProcess(DummyProcess):
 
 class ProcessingTestCase(unittest.TestCase):
 	
-	prefix = "blockchaintools_test"
+	@property
+	def TestProcess(self):
+		return ProcessingDummyProcess
 	
-	def __init__(self, methodName="runTest"):
-		super().__init__(methodName)
-		self.testProcess = ProcessingDummyProcess(prefix="blockchaintools_test")
+	@property
+	def prefix(self):
+		return "blockchaintools_test"
+	
+	@property
+	def testProcess(self):
+		if not hasattr(self, "_testProcess"):
+			self._testProcess = self.makeDefaultTestProcess()
+		return self._testProcess
+	
+	def makeDefaultTestProcess(self):
+		"""Instantiate test process and return the instance."""
+		return self.TestProcess(prefix=self.prefix)
 	
 	def setUp(self):
 		# Start test.
@@ -89,6 +101,41 @@ class ExternalLinuxProcessTestCase(ProcessingTestCase):
 		self.assertIn(self.testProcess.envVarName, envDict.keys())
 		self.assertIn(self.testProcess.envVarValue, envDict.values())
 
+class ProcessingMultiArgTestCase(ProcessingTestCase):
+	
+	"""Base class for test cases needing multiple dummy processs arguments to test against."""
+	
+	@property
+	def testArgs(self):
+		"""A dict containing the arguments for testing in a convenient key-value association."""
+		return dict({"param1": "value1", "param2": "value2", "param3": "value3", "param4": "value4"})
+	
+	@property
+	def testArgsToPass(self):
+		"""Arguments passed to the test process."""
+		return ["param1", "value1", "param2", "value2", "param3", "value3", "param4", "value4"]
+	
+	@property
+	def testArgsToCheck(self):
+		"""Arguments subclassed tests might want to use to test subsets."""
+		return ["param2", "value2", "param3", "value3"]
+
+	@property
+	def uniqueTestArgsToCheck(self):
+		return [self.testProcess.makeUnique(a) for a in self.testArgsToCheck]
+	
+	def makeDefaultTestProcess(self):
+		return self.TestProcess(prefix=self.prefix,\
+			args=self.testArgsToPass, makeArgsUnique=True)
+
+class ExternalLinuxProcessMultiArgTestCase(ProcessingMultiArgTestCase):
+	
+	def test_inArgv(self):
+		process = ProcessList().byPid(self.testProcess.pid)[0]
+		#dprint("Args we're looking for:", self.uniqueTestArgsToCheck)
+		#dprint("Actual argv:", process.getArgv())
+		self.assertTrue(process.inArgv(self.uniqueTestArgsToCheck))
+	
 
 ## This class gets instantiated by the "testing" script right after importing this module.
 #class Testing(object):

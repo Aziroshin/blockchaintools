@@ -462,14 +462,40 @@ class ExternalLinuxProcess(object):
 		return envDict
 	
 	def hasArg(self, arg, raw=None, splitArgs=None):
-		"""Is the specified arg in the processes argv?
-		Returns True if it is, False if it's not."""
+		"""Is the specified arg in the processes argv?"""
 		return arg in self.getArgv(raw=self.raw(raw), splitArgs=self.splitArgs(splitArgs), withComm=False)
+
+	def hasEnvVar(self, varName):
+		"""Is the specfied env var in the env of the process?"""
+		return varName in self.env.keys()
 
 	def inArg(self, string, raw=None, splitArgs=None):
 		"""Is the specified substring in one of the args in argv?
 		Returns True if it is, False if it's not."""
 		return any([arg for arg in self.getArgv(raw=self.raw(raw), splitArgs=self.splitArgs(splitArgs)) if string in arg])
+	
+	def inArgv(self, matchArgs, raw=None, splitArgs=None):
+		"""Is matchArgs a subset of argv?"""
+		argv = self.getArgv(raw=raw, splitArgs=splitArgs)
+		#dprint("ARGV Actual argv:", argv)
+		#dprint("ARGV match args:", matchArgs)
+		argvIndex = 0
+		for arg in argv:
+			#dprint("ARGV current arg:", arg)
+			matchIndex = 0
+			for matchArg in matchArgs:
+				dprint("ARGV trying to match:\n",  arg, "\n", matchArg, "\nmatchIndex:", matchIndex)
+				try:
+					if not argv[argvIndex+matchIndex] == matchArg:
+						break
+					else:
+						dprint("FOUND MATCH")
+				except IndexError:
+					return False # We've looped through all of argv without a match and overstepped.
+				if matchIndex == len(matchArgs)-1:
+					return True # matchArgs is a subset of argv.
+			argvIndex += 1
+		return False # We've looped through all of argv without a match and didn't overstep.
 
 # TODO: Windows/MacOS X support, if that should ever
 # be required.
