@@ -484,11 +484,12 @@ class ExternalLinuxProcess(object):
 			#dprint("ARGV current arg:", arg)
 			matchIndex = 0
 			for matchArg in matchArgs:
-				dprint("ARGV trying to match:\n",  arg, "\n", matchArg, "\nmatchIndex:", matchIndex)
+				dprint("ARGV trying to match:\n", argv[argvIndex+matchIndex], "\n", matchArg, "\nmatchIndex:", matchIndex)
 				try:
 					if not argv[argvIndex+matchIndex] == matchArg:
 						break
 					else:
+						matchIndex += 1
 						dprint("FOUND MATCH")
 				except IndexError:
 					return False # We've looped through all of argv without a match and overstepped.
