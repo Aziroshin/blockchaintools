@@ -30,9 +30,13 @@ AttributeTuple = namedtuple("DefaultValueAttribute", ["name", "value"],\
 #==========================================================
 class WalletError(ErrorWithCodes):
 	codes = ErrorCodes()
-	codes.CLI_ERROR = 0
-	codes.DAEMON_STUCK = 11
-	codes.RPC_CONNECTION_FAILED = 21
+	# CLI
+	codes.CLI_ERROR = 1
+	# Daemon
+	codes.DAEMON_STUCK = 101
+	codes.DAEMON_DUPLICATE = 102
+	# Wallet IPC
+	codes.RPC_CONNECTION_FAILED = 201
 
 #==========================================================
 class DaemonStuckError(Error):
