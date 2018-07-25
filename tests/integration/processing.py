@@ -100,6 +100,10 @@ class ExternalLinuxProcessTestCase(ProcessingTestCase):
 		envDict = process.env
 		self.assertIn(self.testProcess.envVarName, envDict.keys())
 		self.assertIn(self.testProcess.envVarValue, envDict.values())
+		
+	def test_hasEnvVar(self):
+		process = ProcessList().byPid(self.testProcess.pid)[0]
+		self.assertTrue(process.hasEnvVar(self.testProcess.envVarName))
 
 class ProcessingMultiArgTestCase(ProcessingTestCase):
 	
