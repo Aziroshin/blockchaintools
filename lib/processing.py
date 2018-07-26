@@ -10,7 +10,8 @@ from subprocess import Popen, PIPE
 from pathlib import Path
 import os
 
-from lib.debugging import dprint #NOTE: DEBUG
+# Debug
+#from lib.debugging import dprint #NOTE: DEBUG
 
 #=======================================================================================
 # Datatypes
@@ -144,9 +145,15 @@ class LinuxProcessList(UserList):
 			initWithAll=False)
 			
 	def byArgPart(self, argPart, raw=None):
-		"""Return type(self) object of all processes"""
+		"""Return type(self) object of all processes."""
 		return type(self)(processes=\
 			[p for p in self if p.inArg(argPart, raw=raw, splitArgs=True)],\
+			initWithAll=False)
+	
+	def byArgvPart(self, argvPart, raw=None, splitArgs=None):
+		"""Return type(self) object of all processes with the specified argv subset."""
+		return type(self)(processes=\
+			[p for p in self if p.inArgv(argvPart, raw=raw, splitArgs=splitArgs)],
 			initWithAll=False)
 
 #TODO #NOTE: The list isn't live, but the processes are. This needs to change.
@@ -468,7 +475,7 @@ class ExternalLinuxProcess(object):
 	def hasEnvVar(self, varName):
 		"""Is the specfied env var in the env of the process?"""
 		return varName in self.env.keys()
-
+	
 	def inArg(self, string, raw=None, splitArgs=None):
 		"""Is the specified substring in one of the args in argv?
 		Returns True if it is, False if it's not."""
@@ -477,27 +484,22 @@ class ExternalLinuxProcess(object):
 	def inArgv(self, matchArgs, raw=None, splitArgs=None):
 		"""Is matchArgs a subset of argv?"""
 		argv = self.getArgv(raw=raw, splitArgs=splitArgs)
-		#dprint("ARGV Actual argv:", argv)
-		#dprint("ARGV match args:", matchArgs)
 		argvIndex = 0
 		for arg in argv:
-			#dprint("ARGV current arg:", arg)
 			matchIndex = 0
 			for matchArg in matchArgs:
-				dprint("ARGV trying to match:\n", argv[argvIndex+matchIndex], "\n", matchArg, "\nmatchIndex:", matchIndex)
 				try:
 					if not argv[argvIndex+matchIndex] == matchArg:
 						break
 					else:
 						matchIndex += 1
-						dprint("FOUND MATCH")
 				except IndexError:
 					return False # We've looped through all of argv without a match and overstepped.
 				if matchIndex == len(matchArgs)-1:
 					return True # matchArgs is a subset of argv.
 			argvIndex += 1
 		return False # We've looped through all of argv without a match and didn't overstep.
-
+	
 # TODO: Windows/MacOS X support, if that should ever
 # be required.
 # Towards that end, these variables should later become factories/metaclassed

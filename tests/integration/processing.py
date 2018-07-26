@@ -17,8 +17,8 @@ from lib.processing import ExternalProcess, ProcessList
 from tests.lib.mocking import DummyProcess
 
 # DEBUG
-from lib.debugging import dprint
-import time
+#from lib.debugging import dprint
+#import time
 
 #=======================================================================================
 # Tests
@@ -136,9 +136,11 @@ class ExternalLinuxProcessMultiArgTestCase(ProcessingMultiArgTestCase):
 	
 	def test_inArgv(self):
 		process = ProcessList().byPid(self.testProcess.pid)[0]
-		#dprint("Args we're looking for:", self.uniqueTestArgsToCheck)
-		#dprint("Actual argv:", process.getArgv())
 		self.assertTrue(process.inArgv(self.uniqueTestArgsToCheck))
+	
+	def test_byArgvPart(self):
+		matchedProcess = ProcessList().byArgvPart(self.uniqueTestArgsToCheck)[0]
+		self.assertEqual(self.testProcess.pid, matchedProcess.pid)
 	
 
 ## This class gets instantiated by the "testing" script right after importing this module.
