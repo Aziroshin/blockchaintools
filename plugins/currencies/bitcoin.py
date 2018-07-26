@@ -158,10 +158,6 @@ class BitcoinWallet(Wallet):
 		
 		self.config = config
 		
-		#NOTE: DEBUG
-		self.getDaemonProcess()
-		raise Exception("CONTINUE DEVELOPING HERE")
-		
 		#=============================
 		# Check path sanity.
 		batchPathExistenceCheck = BatchPathExistenceCheck()
@@ -212,15 +208,39 @@ class BitcoinWallet(Wallet):
 		#processList = ProcessList(raw=False).byName(self.config.cliBinPath).byArg("-datadir")\
 			#.byArg(self.config.dataDirPath)
 		
-		# TODO: Recognize datadir of process started without -datadir option.
+		# TODO A: Recognize datadir of process started without -datadir option.
 		# Will probably need detection of HOME variable for process, just to be sure.
 		#dprint(self.config.dataDirPath)
-		processes = ProcessList(raw=False, splitArgs=True).byName("bitcoind")#.byArg("-datadir")[0].getArgv()
-		dprint("env has home", "HOME" in processes[0].env.keys())
-		dprint("bitcoind name:", processes[0].name)
+		# TODO B: What to do when multiple instances with the same datadir exist?
+		# This could happen in a botched attempt to start the daemon, either by an
+		# external script, manual intervention or a bug of our own.
+		# TODO C: What to do if there are to instances with the same datadir, whereas
+		# one has it specified through -datadir and one considers it the home dir.
+		
+		# NOTE: Working on these todos won't just include raising an error, but
+		# providing means of resolving the problem, lest the user be left hanging
+		# with a deranged setup, with no way to fix it without ripping away at the wires.
+		
+		# Get daemon landscape.
+		daemons = ProcessList(raw=False, splitArgs=True).byName("bitcoind")
+		daemonWithDatadirByArg = daemons.byArgvPart(["-datadir", self.config.dataDirPath])\
+			[0] # <- Not a solution to #TODO B.
+		#daemonWithDatadirbyHome = 
+		
+		#if len(daemonWithDatadirByArg) > 1 or len(daemonWithDatadirbyHome) > 1:
+			#TODO B
+		#if daemonWithDatadirByArg and daemonWithDatadirbyHome:
+			#TODO C
+		if daemonWithDatadirByArg:
+			return daemonWithDatadirByArg
+		else:
+			pass#TODO
+		# Debug
+		dprint("env has home", "HOME" in process.env.keys())
+		dprint("bitcoind name:", process.name)
 		dprint("data dir path:", self.config.dataDirPath)
-		#if processes.inArgv("-datadir", self.config.dataDirPath):
-			#pass#TODO
+		dprint("process argv:", process.getArgv())
+		
 		return None
 
 	def runCli(self, commandLine):

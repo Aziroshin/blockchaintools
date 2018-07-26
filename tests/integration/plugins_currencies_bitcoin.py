@@ -33,9 +33,9 @@ TESTDATA_DIR = str(Path(Path(sys.argv[0]).resolve().parent, "tests", "data", "pl
 
 class BitcoinMockProcess(DummyProcess):
 	
-	def __init__(self, homeDirSourcePath=None, sourcePath=None):
+	def __init__(self, homeDirSourcePath=None, sourcePath=None, args=None, withDatadirArg=False):
 		
-		super().__init__(prefix="", sourcePath=sourcePath)
+		super().__init__(prefix="", sourcePath=sourcePath, args=args)
 		
 		self.homeDirSourcePath = Path(homeDirSourcePath)
 		
@@ -47,6 +47,14 @@ class BitcoinMockProcess(DummyProcess):
 			else:
 				if self.homeDirSourcePath.exists():
 					shutil.copytree(str(self.homeDirSourcePath), str(self.homeDirPath))
+		
+		if withDatadirArg:
+			if not self.datadirArgTestPath.exists():
+				# If the parent directory (supposedly self.tempDir) doesn't exist, we
+				# we want this to fail, so we use os.mkdir instead of shutil.mktree().
+				os.mkdir(str(self.datadirArgTestPath))
+			self.standardArgs = self.standardArgs+["-datadir={0}".format(str(self.datadirArgTestPath))]
+	
 	@property
 	def envToRun(self):
 		return dict(os.environ).update({"HOME": str(Path(self.tempDir.name, "home"))})
@@ -60,6 +68,10 @@ class BitcoinMockProcess(DummyProcess):
 	def basePath(self):
 		"""Return the path of the directory the binaries are expected to reside in."""
 		return Path(self.execPath).parent
+	
+	@property
+	def datadirArgTestPath(self):
+		return Path(self.tempDir.name, "datadir")
 
 class BitcoinDaemonMockProcess(BitcoinMockProcess):
 	@property
@@ -77,9 +89,11 @@ class BitcoinTestCase(unittest.TestCase):
 	
 	def __init__(self, methodName="runTest"):
 		super().__init__(methodName)
-		self.testDaemonProcess = BitcoinDaemonMockProcess(sourcePath=str(self.mockDaemonSourcePath),\
+		self.daemonProcess = BitcoinDaemonMockProcess(sourcePath=str(self.mockDaemonSourcePath),\
 			homeDirSourcePath=str(self.homeDirSourcePath))
-		self.testCliProcess = BitcoinCliMockProcess(sourcePath=str(self.mockCliSourcePath),\
+		self.daemonProcessWithDatadir = BitcoinDaemonMockProcess(sourcePath=str(self.mockDaemonSourcePath),\
+			homeDirSourcePath=str(self.homeDirSourcePath), withDatadirArg=True)
+		self.cliProcess = BitcoinCliMockProcess(sourcePath=str(self.mockCliSourcePath),\
 			homeDirSourcePath=str(self.homeDirSourcePath))
 	
 	@property
@@ -95,17 +109,18 @@ class BitcoinTestCase(unittest.TestCase):
 		return Path(TESTDATA_DIR, "default-home")
 	
 	def setUp(self):
-		self.testDaemonProcess.start()
-		
+		self.daemonProcess.start()
+		self.daemonProcessWithDatadir.start()
 	def tearDown(self):
-		self.testDaemonProcess.stop()
+		self.daemonProcessWithDatadir.stop()
+		self.daemonProcess.stop()
 	
 class BitcoinDaemonTestCase(BitcoinTestCase):
 	
 	def newWalletInstance(self):
 		return Wallet(Config(\
-			basePaths=[str(self.testDaemonProcess.basePath)],\
-			dataDirBaseDirPath=self.testDaemonProcess.homeDirPath))
+			basePaths=[str(self.daemonProcess.basePath)],\
+			dataDirBaseDirPath=self.daemonProcess.homeDirPath))
 	
 	#def test_start(self):
 	#	wallet = self.newWalletInstance()
@@ -113,7 +128,7 @@ class BitcoinDaemonTestCase(BitcoinTestCase):
 	def test_getDaemon(self):
 		#while True: pass
 		wallet = self.newWalletInstance()
-		wallet.getDaemon()
+		wallet.getDaemonProcess()
 
 if __name__ == "__main__":
 	unittest.main()

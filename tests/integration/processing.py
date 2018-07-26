@@ -32,6 +32,20 @@ class ProcessingDummyProcess(DummyProcess):
 
 class ProcessingTestCase(unittest.TestCase):
 	
+	#=============================
+	# BEGIN: COMMON
+	# Often used functionality in
+	# this test module.
+	#=============================
+	@property
+	def externalProcess(self):
+		"""The external, already started test process found by PID."""
+		if not hasattr(self, "_externalProcess"):
+			self._externalProcess = ProcessList().byPid(self.process.pid)[0]
+		return self._externalProcess
+	# END: COMMON
+	#=============================
+	
 	@property
 	def TestProcess(self):
 		return ProcessingDummyProcess
@@ -41,10 +55,10 @@ class ProcessingTestCase(unittest.TestCase):
 		return "blockchaintools_test"
 	
 	@property
-	def testProcess(self):
-		if not hasattr(self, "_testProcess"):
-			self._testProcess = self.makeDefaultTestProcess()
-		return self._testProcess
+	def process(self):
+		if not hasattr(self, "_process"):
+			self._process = self.makeDefaultTestProcess()
+		return self._process
 	
 	def makeDefaultTestProcess(self):
 		"""Instantiate test process and return the instance."""
@@ -52,58 +66,58 @@ class ProcessingTestCase(unittest.TestCase):
 	
 	def setUp(self):
 		# Start test.
-		self.testProcess.start()
+		self.process.start()
 	
 	def tearDown(self):
-		self.testProcess.stop()
+		self.process.stop()
 
 class ProcessListTestCase(ProcessingTestCase):
 	
 	@property
 	def partialTestProcessArgValue(self):
-		"""This is .testProcessArgValue[4:-3]"""
-		return self.testProcess.argValue[4:-3]
+		"""This is .processArgValue[4:-3]"""
+		return self.process.argValue[4:-3]
 	
 	def test_byPid(self):
-		matchedProcess = ProcessList().byPid(self.testProcess.pid)
-		self.assertEqual(self.testProcess.pid, matchedProcess[0].pid)
+		matchedProcess = ProcessList().byPid(self.process.pid)
+		self.assertEqual(self.process.pid, matchedProcess[0].pid)
 	
 	def test_byName(self):
-		matchedProcess = ProcessList().byName(self.testProcess.name)[0]
-		self.assertEqual(matchedProcess.getPid(), self.testProcess.pid)
+		matchedProcess = ProcessList().byName(self.process.name)[0]
+		self.assertEqual(matchedProcess.getPid(), self.process.pid)
 	
 	def test_byPath(self):
-		matchedProcess = ProcessList().byPath(self.testProcess.execPath)[0]
-		self.assertEqual(self.testProcess.execPath, matchedProcess.path)
+		matchedProcess = ProcessList().byPath(self.process.execPath)[0]
+		self.assertEqual(self.process.execPath, matchedProcess.path)
 	
 	def test_byArgPart(self):
 		#"""[Test: ProcessList.byArgPart]"""
 		matchedProcess = ProcessList().byArgPart(self.partialTestProcessArgValue)[0]
-		self.assertEqual(matchedProcess.getPid(), self.testProcess.pid)
+		self.assertEqual(matchedProcess.getPid(), self.process.pid)
 		
 	def test_byArg(self):
-		matchedProcess = ProcessList().byArg(self.testProcess.argParam)[0]
-		self.assertEqual(matchedProcess.getPid(), self.testProcess.pid)
+		matchedProcess = ProcessList().byArg(self.process.argParam)[0]
+		self.assertEqual(matchedProcess.getPid(), self.process.pid)
 
 class ExternalLinuxProcessTestCase(ProcessingTestCase):
 	
 	def test_name(self):
-		process = ProcessList().byPid(self.testProcess.pid)[0]
-		self.assertEqual(self.testProcess.name, process.name)
+		self.assertEqual(self.process.name, self.externalProcess.name)
 	
 	def test_path(self):
-		process = ProcessList().byPid(self.testProcess.pid)[0]
-		self.assertEqual(self.testProcess.execPath, process.path)
+		self.assertEqual(self.process.execPath, self.externalProcess.path)
 	
 	def test_getEnvDict(self):
-		process = ProcessList().byName(self.testProcess.name)[0]
+		process = ProcessList().byName(self.process.name)[0]
 		envDict = process.env
-		self.assertIn(self.testProcess.envVarName, envDict.keys())
-		self.assertIn(self.testProcess.envVarValue, envDict.values())
+		self.assertIn(self.process.envVarName, envDict.keys())
+		self.assertIn(self.process.envVarValue, envDict.values())
 		
 	def test_hasEnvVar(self):
-		process = ProcessList().byPid(self.testProcess.pid)[0]
-		self.assertTrue(process.hasEnvVar(self.testProcess.envVarName))
+		self.assertTrue(self.externalProcess.hasEnvVar(self.process.envVarName))
+		
+	def test_hasEnvPair(self):
+		self.assertTrue(self.externalProcess.hasEnvPair(self.process.envVarName, self.process.envVarValue))
 
 class ProcessingMultiArgTestCase(ProcessingTestCase):
 	
@@ -126,7 +140,7 @@ class ProcessingMultiArgTestCase(ProcessingTestCase):
 
 	@property
 	def uniqueTestArgsToCheck(self):
-		return [self.testProcess.makeUnique(a) for a in self.testArgsToCheck]
+		return [self.process.makeUnique(a) for a in self.testArgsToCheck]
 	
 	def makeDefaultTestProcess(self):
 		return self.TestProcess(prefix=self.prefix,\
@@ -135,12 +149,12 @@ class ProcessingMultiArgTestCase(ProcessingTestCase):
 class ExternalLinuxProcessMultiArgTestCase(ProcessingMultiArgTestCase):
 	
 	def test_inArgv(self):
-		process = ProcessList().byPid(self.testProcess.pid)[0]
+		process = self.externalProcess
 		self.assertTrue(process.inArgv(self.uniqueTestArgsToCheck))
 	
 	def test_byArgvPart(self):
 		matchedProcess = ProcessList().byArgvPart(self.uniqueTestArgsToCheck)[0]
-		self.assertEqual(self.testProcess.pid, matchedProcess.pid)
+		self.assertEqual(self.process.pid, matchedProcess.pid)
 	
 
 ## This class gets instantiated by the "testing" script right after importing this module.

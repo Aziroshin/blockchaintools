@@ -476,6 +476,14 @@ class ExternalLinuxProcess(object):
 		"""Is the specfied env var in the env of the process?"""
 		return varName in self.env.keys()
 	
+	def hasEnvPair(self, varName, varValue, raw=None):
+		"""Is the given varName/varValue pair in env?"""
+		envDict = self.getEnvDict(raw=None)
+		if varName in envDict and envDict[varName] == varValue:
+			return True
+		else:
+			return False
+	
 	def inArg(self, string, raw=None, splitArgs=None):
 		"""Is the specified substring in one of the args in argv?
 		Returns True if it is, False if it's not."""
