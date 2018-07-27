@@ -17,8 +17,8 @@ from lib.processing import ExternalProcess, ProcessList
 from tests.lib.mocking import DummyProcess
 
 # DEBUG
-#from lib.debugging import dprint
-#import time
+from lib.debugging import dprint
+import time
 
 #=======================================================================================
 # Tests
@@ -118,6 +118,11 @@ class ExternalLinuxProcessTestCase(ProcessingTestCase):
 		
 	def test_hasEnvPair(self):
 		self.assertTrue(self.externalProcess.hasEnvPair(self.process.envVarName, self.process.envVarValue))
+		
+	def test_status(self):
+		dprint(self.externalProcess.status)
+		self.assertEqual(self.externalProcess.status["Pid"], self.process.pid)
+		
 
 class ProcessingMultiArgTestCase(ProcessingTestCase):
 	

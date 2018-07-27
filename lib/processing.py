@@ -5,13 +5,13 @@
 #=======================================================================================
 
 # Python.
-from collections import namedtuple, UserList
+from collections import namedtuple, UserList, UserDict
 from subprocess import Popen, PIPE
 from pathlib import Path
 import os
 
 # Debug
-#from lib.debugging import dprint #NOTE: DEBUG
+from lib.debugging import dprint #NOTE: DEBUG
 
 #=======================================================================================
 # Datatypes
@@ -27,6 +27,8 @@ UnsplitVar = namedtuple("UnsplitVar", ["var", "value"], verbose=False, rename=Fa
 # SplitArg
 SplitArg = namedtuple("SplitArg", ["param", "value"], verbose=False, rename=False)
 UnsplitArg = namedtuple("UnsplitArg", ["param"], verbose=False, rename=False)
+# Proc status
+ProcStatus = namedtuple("ProcStatus", ["name", "data"])
 
 #=======================================================================================
 # Library
@@ -178,6 +180,7 @@ class LinuxProcessInfo(object):
 			self.comm = self._readProc(["comm"])
 			self.cwd = self._resolveSymlink(["cwd"])
 			self.environ = self._readProc(["environ"])
+			self.status = self._readProc(["status"])
 		except FileNotFoundError:
 			raise NoSuchProcessError("A process with the PID {0} doesn't exist (anymore?)."\
 				.format(self.pid))
@@ -319,7 +322,54 @@ class Env(KeyValueData):
 	
 	def __init__(self, data, raw):
 		super().__init__(data, raw, unsplitFiller="")
+
+#=========================================================
+class LinuxProcessStatus(UserDict):
+	
+	def __init__(self, procData, raw):
+		super().__init__(self)
+		self.procData = procData
+		self.raw = raw
+		dprint(self.raw)
+		if self.raw is True:
+			self.data = self.rawDict
+		elif self.raw is False:
+			self.data = self.stringDict
+	
+	@property
+	def dataLines(self):
+		"""List of every line found in the status output."""
+		self.procData.split(b"\n")
 		
+	@property
+	def dataPairs(self):
+		"""List of key/value pairs per line."""
+		return [ProcStatus(*line.partition(b"\x00")[0::2]) for line in self.dataLines]
+	
+	@property
+	def dataPairsAllAreTuples(self):
+		"""List of key/value pairs per line where lines with multiple values have them listed."""
+		return [ProcStatus(pair[0], pair[1].split(b"\x00").strip(b"\x00")) for pair in self.dataPairs]
+	
+	@property
+	def dataPairsMultisAreTuples(self):
+		"""Like dataPairsAllTuples, but only status values with more than one item are tupled."""
+		pairs = []
+		for pair in self.dataPairsAllAreTuples:
+			if len(pair[1] > 1):
+				pairs.append(pair)
+			else:
+				pairs.append(ProcStatus(pair[0], pair[1]))
+	@property
+	def rawDict(self):
+		"""Pairs sorted into a dict in their raw bytes() form."""
+		return {pair.name: pair.data for pair in self.dataPairsMultisAreTuples}
+		
+	@property
+	def stringDict(self):
+		"""Pairs sorted into a dict in string form."""
+		return {pair.name.decode(): pair.data.decode() for pair in self.dataPairsMultisAreTuples}
+	
 #=========================================================
 class ExternalLinuxProcess(object):
 	
@@ -345,7 +395,10 @@ class ExternalLinuxProcess(object):
 		self.splitArgsDefaultSetting = splitArgs
 		self.splitVarsDefaultSetting = splitVars
 	
-	# Convenience.
+	#=============================
+	# BEGIN: COMMON
+	# Convenience properties which wrap around getter functions, returning their value
+	# in whatever is the resulting default considering our configuration (say, for 'raw').
 	@property
 	def pid(self):
 		return self.getPid()
@@ -362,10 +415,24 @@ class ExternalLinuxProcess(object):
 	def env(self):
 		return self.getEnvDict()
 	
+	@property
+	def status(self):
+		return LinuxProcessStatus(self.info.status, raw=self.raw())
+	
+	@property
+	def user(self):
+		pass#TODO
+		
+	@property
+	def home(self):
+		pass#TODO
+	# END: COMMON
+	#=============================
+	
 	#=============================
 	# Default overriders
 	
-	def raw(self, override):
+	def raw(self, override=None):
 		"""Returns "raw" as set for the constructor if override is None, otherwise returns override."""
 		if override is None:
 			return self.rawDefaultSetting
@@ -388,7 +455,7 @@ class ExternalLinuxProcess(object):
 	
 	def _typeString(self, byteString, raw=None):
 		
-		"""Make sure the specified string is ether bytes or str as specified.
+		"""Make sure the specified string is either bytes or str as specified.
 		
 		Takes bytes(), determines whether we're currently configured to cast
 		bytes() into str() and returns accordingly.
@@ -411,6 +478,10 @@ class ExternalLinuxProcess(object):
 			return byteStringList
 		else:
 			return [byteString.decode() for byteString in byteStringList]
+	
+	def getStatus(self, raw=None):
+		""""""
+		return {s for s in self.info.status.split(r'\n')}
 	
 	def getName(self, raw=None):
 		"""Name of the process without arguments."""
