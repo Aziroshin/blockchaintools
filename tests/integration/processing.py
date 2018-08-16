@@ -120,7 +120,7 @@ class ExternalLinuxProcessTestCase(ProcessingTestCase):
 		self.assertTrue(self.externalProcess.hasEnvPair(self.process.envVarName, self.process.envVarValue))
 		
 	def test_status(self):
-		dprint(self.externalProcess.status)
+		dprint("status:", self.externalProcess.status)
 		self.assertEqual(self.externalProcess.status["Pid"], self.process.pid)
 		
 

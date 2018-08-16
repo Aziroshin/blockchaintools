@@ -339,7 +339,7 @@ class LinuxProcessStatus(UserDict):
 	@property
 	def dataLines(self):
 		"""List of every line found in the status output."""
-		self.procData.split(b"\n")
+		return self.procData.split(b"\n")
 		
 	@property
 	def dataPairs(self):
@@ -348,18 +348,20 @@ class LinuxProcessStatus(UserDict):
 	
 	@property
 	def dataPairsAllAreTuples(self):
-		"""List of key/value pairs per line where lines with multiple values have them listed."""
-		return [ProcStatus(pair[0], pair[1].split(b"\x00").strip(b"\x00")) for pair in self.dataPairs]
+		"""List of key/value pairs per line where lines with multiple values have them tupled."""
+		return [ProcStatus(pair[0], pair[1].strip(b"\x00").split(b"\x00")) for pair in self.dataPairs]
 	
 	@property
 	def dataPairsMultisAreTuples(self):
 		"""Like dataPairsAllTuples, but only status values with more than one item are tupled."""
 		pairs = []
 		for pair in self.dataPairsAllAreTuples:
-			if len(pair[1] > 1):
+			if len(pair[1]) > 1:
 				pairs.append(pair)
 			else:
 				pairs.append(ProcStatus(pair[0], pair[1]))
+		return pairs
+	
 	@property
 	def rawDict(self):
 		"""Pairs sorted into a dict in their raw bytes() form."""
