@@ -29,6 +29,9 @@ SplitArg = namedtuple("SplitArg", ["param", "value"], verbose=False, rename=Fals
 UnsplitArg = namedtuple("UnsplitArg", ["param"], verbose=False, rename=False)
 # Proc status
 ProcStatus = namedtuple("ProcStatus", ["name", "data"])
+# Proc status: UID & GUID
+ProcStatusUid = namedtuple("ProcStatusUid", ["real", "effective", "savedSet", "filesystem"])
+ProcStatusGid = namedtuple("ProcStatusGid", ["real", "effective", "savedSet", "filesystem"])
 
 #=======================================================================================
 # Library
@@ -326,15 +329,17 @@ class Env(KeyValueData):
 #=========================================================
 class LinuxProcessStatus(UserDict):
 	
-	def __init__(self, procData, raw):
+	def __init__(self, procData, raw, multisAreLists=True):
 		super().__init__(self)
 		self.procData = procData
 		self.raw = raw
-		dprint(self.raw)
-		if self.raw is True:
-			self.data = self.rawDict
-		elif self.raw is False:
-			self.data = self.stringDict
+		if multisAreLists:
+			self.data = self.stringDictMultisAreLists
+		else:
+			if self.raw is True:
+				self.data = self.rawDict
+			elif self.raw is False:
+				self.data = self.stringDict
 	
 	@property
 	def dataLines(self):
@@ -344,33 +349,48 @@ class LinuxProcessStatus(UserDict):
 	@property
 	def dataPairs(self):
 		"""List of key/value pairs per line."""
-		return [ProcStatus(*line.partition(b"\x00")[0::2]) for line in self.dataLines]
+		return [ProcStatus(*line.partition(b":\t")[0::2]) for line in self.dataLines]
 	
 	@property
-	def dataPairsAllAreTuples(self):
-		"""List of key/value pairs per line where lines with multiple values have them tupled."""
-		return [ProcStatus(pair[0], pair[1].strip(b"\x00").split(b"\x00")) for pair in self.dataPairs]
+	def dataPairsAllAreLists(self):
+		"""List of key/value pairs per line where lines with multiple values have them listed."""
+		return [ProcStatus(pair[0], pair[1].strip(b"\x00").split(b"\t")) for pair in self.dataPairs]
 	
 	@property
-	def dataPairsMultisAreTuples(self):
-		"""Like dataPairsAllTuples, but only status values with more than one item are tupled."""
+	def dataPairsMultisAreLists(self):
+		"""Like dataPairsAllTuples, but only status values with more than one item are listed."""
 		pairs = []
-		for pair in self.dataPairsAllAreTuples:
+		for pair in self.dataPairsAllAreLists:
 			if len(pair[1]) > 1:
 				pairs.append(pair)
 			else:
-				pairs.append(ProcStatus(pair[0], pair[1]))
+				pairs.append(ProcStatus(pair[0], pair[1][0]))
 		return pairs
 	
 	@property
 	def rawDict(self):
 		"""Pairs sorted into a dict in their raw bytes() form."""
-		return {pair.name: pair.data for pair in self.dataPairsMultisAreTuples}
+		return {pair.name: pair.data for pair in self.dataPairsMultisAreLists}
 		
 	@property
 	def stringDict(self):
 		"""Pairs sorted into a dict in string form."""
-		return {pair.name.decode(): pair.data.decode() for pair in self.dataPairsMultisAreTuples}
+		return {pair.name.decode(): b"\t".join(pair.data).decode() for pair in self.dataPairsAllAreLists}
+	
+	@property
+	def stringDictMultisAreLists(self):
+		"""Dict with str() keys, the values being str(), except multi-field ones, they're lists."""
+		return {pair.name.decode(): self.stringify(pair.data) for pair in self.dataPairsMultisAreLists}
+	
+	def stringify(self, statusData):
+		"""If value is ProcStatus(), returns stringified ProcStatus(). Else, str() (former bytes()).
+		This is a "magic" method to produce a dict with string keys, and string values if they're
+		single column values in /proc/*/status, or list values for multi column ones."""
+		if type(statusData) is list:
+			return [s.decode() for s in statusData]
+		else:
+			return statusData.decode()
+			
 	
 #=========================================================
 class ExternalLinuxProcess(object):
@@ -428,6 +448,15 @@ class ExternalLinuxProcess(object):
 	@property
 	def home(self):
 		pass#TODO
+		
+	@property
+	def uid(self):
+		return ProcStatusUid(*self.status["Uid"])
+	
+	@property
+	def gid(self):
+		return ProcStatusGid(*self.status["Gid"])
+		
 	# END: COMMON
 	#=============================
 	

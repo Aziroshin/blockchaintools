@@ -9,6 +9,7 @@ import random
 import string
 import tempfile
 import stat
+import getpass
 from pathlib import Path
 
 # Local
@@ -120,9 +121,12 @@ class ExternalLinuxProcessTestCase(ProcessingTestCase):
 		self.assertTrue(self.externalProcess.hasEnvPair(self.process.envVarName, self.process.envVarValue))
 		
 	def test_status(self):
-		dprint("status:", self.externalProcess.status)
-		self.assertEqual(self.externalProcess.status["Pid"], self.process.pid)
+		self.assertEqual(self.externalProcess.status["Pid"], str(self.process.pid))
 		
+	def test_effectiveUid(self):
+		self.assertEqual(self.externalProcess.uid.effective, str(os.getuid()))
+	def test_effectiveGid(self):
+		self.assertEqual(self.externalProcess.gid.effective, str(os.getgid()))
 
 class ProcessingMultiArgTestCase(ProcessingTestCase):
 	
