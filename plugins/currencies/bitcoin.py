@@ -132,6 +132,35 @@ class BitcoinConfig(CurrencyConfig):
 			return shutil.which(fileName)
 		return filePath
 
+class Daemons(ProcessList):
+	"""A snapshot of all running wallet daemons associated with our currency.
+	The format used is ProcessList.
+	
+	Takes:
+		- nameToMatch (str): Executable name for all daemons we want to match."""
+	
+	def __init__(self, nameToMatch, dataDirToMatch, homeDirToMatch):
+		super(self).__init__()
+		self.nameToMatch = name
+		self.dataDirToMatch = dataDirToMatch
+		self.homeDirToMatch = homeDirToMatch
+		
+	@property
+	def all(self):
+		"""Get all daemon processes for currently running wallets for our currency."""
+		if not hasattr(self, "_all"):
+			self._all = type(self)(raw=False, splitArgs=True).byName(self.nameToMatch)
+		return self._all
+	
+	@property
+	def byDataDirAsArg(self):
+		"""Narrow down by -datadir arg."""
+	
+	@property
+	def byHomeDir(self):
+		"""Narrow down by home dir."""
+		pass#TODO
+
 #==========================================================
 # TODO: One day, this class will need to be redone. It's baggage from
 # an older time with hacks all over the place. It kind of worked for mnchecker,
@@ -201,8 +230,8 @@ class BitcoinWallet(Wallet):
 			if error.code == type(error).codes.RPC_CONNECTION_FAILED:
 				return False
 		return True
-
-	def getDaemonProcess(self):
+		
+	def getDaemon(self):
 		"""Returns an ExternalProcess object of the daemon process.
 		Returns None if no process is found."""
 		#processList = ProcessList(raw=False).byName(self.config.cliBinPath).byArg("-datadir")\
@@ -222,9 +251,16 @@ class BitcoinWallet(Wallet):
 		# with a deranged setup, with no way to fix it without ripping away at the wires.
 		
 		# Get daemon landscape.
-		daemons = ProcessList(raw=False, splitArgs=True).byName("bitcoind")
-		daemonWithDatadirByArg = daemons.byArgvPart(["-datadir", self.config.dataDirPath])\
-			[0] # <- Not a solution to #TODO B.
+		# NOTE: Trash code ahead.
+		daemons = self.getAllDaemonProcesses()
+		daemonsWithDatadirByArg = daemons.byArgvPart(["-datadir", self.config.dataDirPath])
+		if len(daemonWithDatadirByArg) == 0:
+			pass#TODO
+		elif len(daemonWithDatadirByArg) == 1:
+			
+		else:
+			pass#TODO B
+		
 		#daemonWithDatadirbyHome = 
 		
 		#if len(daemonWithDatadirByArg) > 1 or len(daemonWithDatadirbyHome) > 1:
