@@ -8,6 +8,8 @@
 from collections import namedtuple, UserList, UserDict
 from subprocess import Popen, PIPE
 from pathlib import Path
+from pwd import getpwuid
+from grp import getgrgid
 import os
 
 # Debug
@@ -30,8 +32,7 @@ UnsplitArg = namedtuple("UnsplitArg", ["param"], verbose=False, rename=False)
 # Proc status
 ProcStatus = namedtuple("ProcStatus", ["name", "data"])
 # Proc status: UID & GUID
-ProcStatusUid = namedtuple("ProcStatusUid", ["real", "effective", "savedSet", "filesystem"])
-ProcStatusGid = namedtuple("ProcStatusGid", ["real", "effective", "savedSet", "filesystem"])
+ProcStatusPerms = namedtuple("ProcStatusPerms", ["real", "effective", "savedSet", "filesystem"])
 
 #=======================================================================================
 # Library
@@ -442,20 +443,32 @@ class ExternalLinuxProcess(object):
 		return LinuxProcessStatus(self.info.status, raw=self.raw())
 	
 	@property
-	def user(self):
-		pass#TODO
-		
-	@property
-	def home(self):
-		pass#TODO
-		
-	@property
-	def uid(self):
-		return ProcStatusUid(*self.status["Uid"])
+	def uids(self):
+		"""Named tuple of Uids: (real, effective, savedSet, filesystem)."""
+		return ProcStatusPerms(*self.status["Uid"])
 	
 	@property
-	def gid(self):
-		return ProcStatusGid(*self.status["Gid"])
+	def gids(self):
+		"""Named tuple of Gids: (real, effective, savedSet, filesystem)."""
+		return ProcStatusPerms(*self.status["Gid"])
+	
+	@property
+	def users(self):
+		"""Named tuple of user names: (real, effective, savedSet, filesystem)."""
+		return ProcStatusPerms(*[getpwuid(p).pw_name for p in self.uids])
+	
+	@property
+	def groups(self):
+		"""Named tuple of group names: (real, effective, savedSet, filesystem)."""
+		return ProcStatusPerms(*[getgrgid(p).gr_name for p in self.gids])
+	
+	@property
+	def home(self):
+		"""If set, returns $HOME. Otherwise, returns home dir path of the effective UID."""
+		try:
+			return self.evnDict["HOME"]
+		except KeyError:
+			return getpwuid(self.uid.effective).pw_dir
 		
 	# END: COMMON
 	#=============================

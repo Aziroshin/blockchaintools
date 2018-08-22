@@ -124,9 +124,9 @@ class ExternalLinuxProcessTestCase(ProcessingTestCase):
 		self.assertEqual(self.externalProcess.status["Pid"], str(self.process.pid))
 		
 	def test_effectiveUid(self):
-		self.assertEqual(self.externalProcess.uid.effective, str(os.getuid()))
+		self.assertEqual(self.externalProcess.uids.effective, str(os.getuid()))
 	def test_effectiveGid(self):
-		self.assertEqual(self.externalProcess.gid.effective, str(os.getgid()))
+		self.assertEqual(self.externalProcess.gids.effective, str(os.getgid()))
 
 class ProcessingMultiArgTestCase(ProcessingTestCase):
 	
