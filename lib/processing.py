@@ -151,7 +151,7 @@ class LinuxProcessList(UserList):
 			initWithAll=False)
 			
 	def byArgPart(self, argPart, raw=None):
-		"""Return type(self) object of all processes."""
+		"""Return type(self) object of all processes with this substring in one of their args."""
 		return type(self)(processes=\
 			[p for p in self if p.inArg(argPart, raw=raw, splitArgs=True)],\
 			initWithAll=False)
@@ -159,7 +159,13 @@ class LinuxProcessList(UserList):
 	def byArgvPart(self, argvPart, raw=None, splitArgs=None):
 		"""Return type(self) object of all processes with the specified argv subset."""
 		return type(self)(processes=\
-			[p for p in self if p.inArgv(argvPart, raw=raw, splitArgs=splitArgs)],
+			[p for p in self if p.inArgv(argvPart, raw=raw, splitArgs=splitArgs)],\
+			initWithAll=False)
+	
+	def byHome(self, home):
+		"""Return type(self) object of all processes with the specified home dir path."""
+		return type(self)(processes=\
+			[p for p in self if p.home == home],\
 			initWithAll=False)
 
 #TODO #NOTE: The list isn't live, but the processes are. This needs to change.

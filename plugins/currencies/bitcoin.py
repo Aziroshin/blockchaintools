@@ -137,29 +137,56 @@ class Daemons(ProcessList):
 	The format used is ProcessList.
 	
 	Takes:
-		- nameToMatch (str): Executable name for all daemons we want to match."""
+		- config (CurrencyConfig): Currency config object for the setup in question."""
 	
-	def __init__(self, nameToMatch, dataDirToMatch, homeDirToMatch):
+	def __init__(self, config,\
+		raw=False, splitArgs=True):
 		super(self).__init__()
-		self.nameToMatch = name
-		self.dataDirToMatch = dataDirToMatch
-		self.homeDirToMatch = homeDirToMatch
+		if initWithAll:
+			# Our definition of "all" is restricted to wallet processes for our currency.
+			self.data = self.all
+		self.config = config
 		
 	@property
 	def all(self):
 		"""Get all daemon processes for currently running wallets for our currency."""
 		if not hasattr(self, "_all"):
-			self._all = type(self)(raw=False, splitArgs=True).byName(self.nameToMatch)
+			self._all = self.byName(self.config.daemonBinName)
 		return self._all
 	
 	@property
-	def byDataDirAsArg(self):
+	def byDataDirArg(self):
 		"""Narrow down by -datadir arg."""
+		if not hasattr(self, "_byDataDirArg"):
+			self._byDataDirArg = self.byArgvPart(["-datadir", self.config.dataDirPath])
+		return self._byDataDirArg
 	
 	@property
-	def byHomeDir(self):
-		"""Narrow down by home dir."""
-		pass#TODO
+	def byHome(self):
+		"""Narrow down by daemons where the home dir matches the datadir parent path."""
+		if not hasattr(self, "_byHome"):
+			self._byHome = self.byHome(self.config.dataDirBaseDirPath)
+			
+	@property
+	def ours(self):
+		"""Our daemon, the one that matches the config as specified in all relevant variables.
+		Specifically, the one that matches the datadir after everything's said and done.
+		
+		When two or more daemon instances with the same -datadir, or no -datadir but
+		the same home dir are found, WalletError with code DAEMON_DUPLICATE is raised."""
+		if len(self.byDataDirArg) == 0:
+			if len(self.byHome) == 0:
+				return None # Found nothing.
+			elif len(self.byHome) == 1:
+				return self.byHome[0] # Found by home.
+			elif len(self.byHome) > 1:
+				raise WalletError("Found two daemon instances without -datadir specified "
+					"with the same home dir: {0}".format(self.config.dataDirBaseDirPath))
+		elif len(self.byDataDirArg) == 1:
+			return self.byDataDirArg[0] # Found by -datadir.
+		elif len(self.byDataDirArg) > 1:
+			raise WalletError("Found two daemon instances with the same -datadir option: {0}"\
+				.format(self.config.dataDirPath), WalletError.codes.DAEMON_DUPLICATE)
 
 #==========================================================
 # TODO: One day, this class will need to be redone. It's baggage from
