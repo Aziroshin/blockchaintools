@@ -128,7 +128,7 @@ class BitcoinDaemonTestCase(BitcoinTestCase):
 	def test_getDaemon(self):
 		#while True: pass
 		wallet = self.newWalletInstance()
-		wallet.getDaemonProcess()
+		wallet.getDaemon()
 
 if __name__ == "__main__":
 	unittest.main()

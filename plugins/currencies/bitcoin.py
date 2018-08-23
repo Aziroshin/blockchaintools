@@ -136,57 +136,46 @@ class Daemons(ProcessList):
 	"""A snapshot of all running wallet daemons associated with our currency.
 	The format used is ProcessList.
 	
-	Takes:
+	Takes (special .init method):
 		- config (CurrencyConfig): Currency config object for the setup in question."""
 	
-	def __init__(self, config,\
-		raw=False, splitArgs=True):
-		super(self).__init__()
-		if initWithAll:
+	def init(self, config):
+		if self.initWithAll:
 			# Our definition of "all" is restricted to wallet processes for our currency.
-			self.data = self.all
-		self.config = config
+			self.data = self.all(config)
+		return self
 		
-	@property
-	def all(self):
+	def all(self, config):
 		"""Get all daemon processes for currently running wallets for our currency."""
 		if not hasattr(self, "_all"):
-			self._all = self.byName(self.config.daemonBinName)
+			self._all = self.byName(config.daemonBinName)
 		return self._all
 	
-	@property
-	def byDataDirArg(self):
+	def byDataDirArg(self, config):
 		"""Narrow down by -datadir arg."""
 		if not hasattr(self, "_byDataDirArg"):
-			self._byDataDirArg = self.byArgvPart(["-datadir", self.config.dataDirPath])
+			self._byDataDirArg = self.byArgvPart(["-datadir", config.dataDirPath])
 		return self._byDataDirArg
-	
-	@property
-	def byHome(self):
-		"""Narrow down by daemons where the home dir matches the datadir parent path."""
-		if not hasattr(self, "_byHome"):
-			self._byHome = self.byHome(self.config.dataDirBaseDirPath)
 			
-	@property
-	def ours(self):
+	def ours(self, config):
 		"""Our daemon, the one that matches the config as specified in all relevant variables.
 		Specifically, the one that matches the datadir after everything's said and done.
 		
 		When two or more daemon instances with the same -datadir, or no -datadir but
 		the same home dir are found, WalletError with code DAEMON_DUPLICATE is raised."""
-		if len(self.byDataDirArg) == 0:
-			if len(self.byHome) == 0:
+		if len(self.byDataDirArg(config)) == 0:
+			if len(self.byHome(config)) == 0:
 				return None # Found nothing.
-			elif len(self.byHome) == 1:
+			elif len(self.byHome(config)) == 1:
 				return self.byHome[0] # Found by home.
-			elif len(self.byHome) > 1:
+			elif len(self.byHome(config)) > 1:
 				raise WalletError("Found two daemon instances without -datadir specified "
-					"with the same home dir: {0}".format(self.config.dataDirBaseDirPath))
-		elif len(self.byDataDirArg) == 1:
-			return self.byDataDirArg[0] # Found by -datadir.
-		elif len(self.byDataDirArg) > 1:
+					"with the same home dir: {0}".format(config.dataDirBaseDirPath))
+		elif len(self.byDataDirArg(config)) == 1:
+			return self.byDataDirArg(config)[0] # Found by -datadir.
+		elif len(self.byDataDirArg(config)) > 1:
 			raise WalletError("Found two daemon instances with the same -datadir option: {0}"\
-				.format(self.config.dataDirPath), WalletError.codes.DAEMON_DUPLICATE)
+				.format(config.dataDirPath), WalletError.codes.DAEMON_DUPLICATE)
 
 #==========================================================
 # TODO: One day, this class will need to be redone. It's baggage from
@@ -264,47 +253,30 @@ class BitcoinWallet(Wallet):
 		#processList = ProcessList(raw=False).byName(self.config.cliBinPath).byArg("-datadir")\
 			#.byArg(self.config.dataDirPath)
 		
+		# NOTE: Current solution only takes into account TODO A and B.
+		
 		# TODO A: Recognize datadir of process started without -datadir option.
-		# Will probably need detection of HOME variable for process, just to be sure.
-		#dprint(self.config.dataDirPath)
+		# Will probably need detection of $HOME variable for process, just to be sure.
+		# !Current solution: Check for $HOME, if not exist, take user home.
+		
 		# TODO B: What to do when multiple instances with the same datadir exist?
 		# This could happen in a botched attempt to start the daemon, either by an
 		# external script, manual intervention or a bug of our own.
-		# TODO C: What to do if there are to instances with the same datadir, whereas
-		# one has it specified through -datadir and one considers it the home dir.
+		# !Current solution: Raise WalletError.codes.DAEMON_DUPLICATE
+		
+		# TODO C: What to do if there are two instances with the same datadir, whereas
+		# one has it specified through -datadir and one arrives at it through its home dir.
 		
 		# NOTE: Working on these todos won't just include raising an error, but
 		# providing means of resolving the problem, lest the user be left hanging
 		# with a deranged setup, with no way to fix it without ripping away at the wires.
 		
-		# Get daemon landscape.
-		# NOTE: Trash code ahead.
-		daemons = self.getAllDaemonProcesses()
-		daemonsWithDatadirByArg = daemons.byArgvPart(["-datadir", self.config.dataDirPath])
-		if len(daemonWithDatadirByArg) == 0:
-			pass#TODO
-		elif len(daemonWithDatadirByArg) == 1:
-			
-		else:
-			pass#TODO B
+		# Get our daemon.
+		daemons = Daemons().init(self.config).ours(self.config)
+		dprint(daemons)
 		
-		#daemonWithDatadirbyHome = 
-		
-		#if len(daemonWithDatadirByArg) > 1 or len(daemonWithDatadirbyHome) > 1:
-			#TODO B
-		#if daemonWithDatadirByArg and daemonWithDatadirbyHome:
-			#TODO C
-		if daemonWithDatadirByArg:
-			return daemonWithDatadirByArg
-		else:
-			pass#TODO
 		# Debug
-		dprint("env has home", "HOME" in process.env.keys())
-		dprint("bitcoind name:", process.name)
-		dprint("data dir path:", self.config.dataDirPath)
-		dprint("process argv:", process.getArgv())
 		
-		return None
 
 	def runCli(self, commandLine):
 		"""Run the command line version of the wallet with a list of command line arguments."""

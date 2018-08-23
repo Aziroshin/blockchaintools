@@ -107,6 +107,7 @@ class LinuxProcessList(UserList):
 		# If you want to change raw and splitArgs defaults, you might also want to
 		# change them in self.getAll and ExternalLinuxProcess.__init__.
 		super().__init__(processes)
+		self.initWithAll = initWithAll
 		if not self and initWithAll:
 			self.data = self.data+self.getAll(raw=raw, splitArgs=splitArgs)
 		
@@ -472,7 +473,7 @@ class ExternalLinuxProcess(object):
 	def home(self):
 		"""If set, returns $HOME. Otherwise, returns home dir path of the effective UID."""
 		try:
-			return self.evnDict["HOME"]
+			return self.getEnvDict()["HOME"]
 		except KeyError:
 			return getpwuid(self.uid.effective).pw_dir
 		
