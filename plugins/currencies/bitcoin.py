@@ -273,7 +273,6 @@ class BitcoinWallet(Wallet):
 		
 		# Get our daemon.
 		daemons = Daemons().init(self.config).ours(self.config)
-		dprint(daemons)
 		
 		# Debug
 		

@@ -16,7 +16,8 @@ from tests.lib.mocking import DummyProcess
 # What's to be tested.
 from plugins.currencies.bitcoin import\
 	BitcoinWallet as Wallet,\
-	BitcoinConfig as Config
+	BitcoinConfig as Config,\
+	Daemons as Daemons
 
 #debug
 from lib.debugging import dprint
@@ -124,6 +125,14 @@ class BitcoinDaemonTestCase(BitcoinTestCase):
 	
 	#def test_start(self):
 	#	wallet = self.newWalletInstance()
+	
+	def test_daemonByDataDirArg(self):
+		wallet = self.newWalletInstance()
+		daemon = Daemons().init(wallet.config).ours(wallet.config)
+		if daemon is None:
+			self.fail("No daemons found.")
+		else:
+			self.assertEqual(daemon.pid, self.daemonProcessWithDatadir.pid)
 	
 	def test_getDaemon(self):
 		#while True: pass
