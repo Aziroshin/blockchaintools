@@ -11,6 +11,7 @@ from pathlib import Path
 from pwd import getpwuid
 from grp import getgrgid
 import os
+import sys
 
 # Debug
 from lib.debugging import dprint #NOTE: DEBUG
@@ -19,16 +20,28 @@ from lib.debugging import dprint #NOTE: DEBUG
 # Datatypes
 #=======================================================================================
 
-ProcessOutput = namedtuple("ProcessOutput", ["stdout", "stderr"], verbose=False, rename=False)
+# collections.namedtuple changed from Python version 3.6 to 3.7:
+# In 3.6, "verbose" can be directly passed to the constructor, in 3.7, that has
+# to be done by means of the "defaults" argument. This is a hack-around to ensure
+# compatibility with 3.6 and beyond.
+if sys.version_info.minor <= 6:
+	dprint("old python")
+	_dataTypesConfig = {"verbose": False, "rename": False}
+else:
+	dprint("new python")
+	_dataTypesConfig = {"defaults": {"verbose": False}, "rename": False}
+
+TestTuple = namedtuple("TestTuple", ["a", "b"], **_dataTypesConfig)
+ProcessOutput = namedtuple("ProcessOutput", ["stdout", "stderr"], **_dataTypesConfig)
 # SplitPair
-SplitPair = namedtuple("SplitPair", ["key", "value"], verbose=False, rename=False)
-UnsplitPair = namedtuple("UnsplitPair", ["key"], verbose=False, rename=False)
+SplitPair = namedtuple("SplitPair", ["key", "value"], **_dataTypesConfig)
+UnsplitPair = namedtuple("UnsplitPair", ["key"], **_dataTypesConfig)
 # SplitVar
-SplitVar = namedtuple("SplitVar", ["var", "value"], verbose=False, rename=False)
-UnsplitVar = namedtuple("UnsplitVar", ["var", "value"], verbose=False, rename=False)
+SplitVar = namedtuple("SplitVar", ["var", "value"], **_dataTypesConfig)
+UnsplitVar = namedtuple("UnsplitVar", ["var", "value"], **_dataTypesConfig)
 # SplitArg
-SplitArg = namedtuple("SplitArg", ["param", "value"], verbose=False, rename=False)
-UnsplitArg = namedtuple("UnsplitArg", ["param"], verbose=False, rename=False)
+SplitArg = namedtuple("SplitArg", ["param", "value"], **_dataTypesConfig)
+UnsplitArg = namedtuple("UnsplitArg", ["param"], **_dataTypesConfig)
 # Proc status
 ProcStatus = namedtuple("ProcStatus", ["name", "data"])
 # Proc status: UID & GUID
