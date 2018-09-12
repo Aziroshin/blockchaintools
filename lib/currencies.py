@@ -5,7 +5,8 @@
 #=======================================================================================
 
 # Python.
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
+from collections import namedtuple
 import json
 import inspect
 
@@ -20,8 +21,7 @@ from lib.exceptions import Error, ErrorWithCodes, ErrorCodes
 # Datatypes
 #==========================================================
 
-AttributeTuple = namedtuple("DefaultValueAttribute", ["name", "value"],\
-	verbose=False, rename=False)
+AttributeTuple = namedtuple("DefaultValueAttribute", "name value")
 
 #==========================================================
 # Exceptions

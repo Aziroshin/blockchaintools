@@ -25,27 +25,25 @@ from lib.debugging import dprint #NOTE: DEBUG
 # to be done by means of the "defaults" argument. This is a hack-around to ensure
 # compatibility with 3.6 and beyond.
 if sys.version_info.minor <= 6:
-	dprint("old python")
 	_dataTypesConfig = {"verbose": False, "rename": False}
 else:
-	dprint("new python")
 	_dataTypesConfig = {"defaults": {"verbose": False}, "rename": False}
 
-TestTuple = namedtuple("TestTuple", ["a", "b"], **_dataTypesConfig)
-ProcessOutput = namedtuple("ProcessOutput", ["stdout", "stderr"], **_dataTypesConfig)
+TestTuple = namedtuple("TestTuple", "a b")
+ProcessOutput = namedtuple("ProcessOutput", "stdout stderr")
 # SplitPair
-SplitPair = namedtuple("SplitPair", ["key", "value"], **_dataTypesConfig)
-UnsplitPair = namedtuple("UnsplitPair", ["key"], **_dataTypesConfig)
+SplitPair = namedtuple("SplitPair", "key value")
+UnsplitPair = namedtuple("UnsplitPair", "key")
 # SplitVar
-SplitVar = namedtuple("SplitVar", ["var", "value"], **_dataTypesConfig)
-UnsplitVar = namedtuple("UnsplitVar", ["var", "value"], **_dataTypesConfig)
+SplitVar = namedtuple("SplitVar", "var value")
+UnsplitVar = namedtuple("UnsplitVar", "var value")
 # SplitArg
-SplitArg = namedtuple("SplitArg", ["param", "value"], **_dataTypesConfig)
-UnsplitArg = namedtuple("UnsplitArg", ["param"], **_dataTypesConfig)
+SplitArg = namedtuple("SplitArg", "param value")
+UnsplitArg = namedtuple("UnsplitArg", "param")
 # Proc status
-ProcStatus = namedtuple("ProcStatus", ["name", "data"])
+ProcStatus = namedtuple("ProcStatus", "name data")
 # Proc status: UID & GUID
-ProcStatusPerms = namedtuple("ProcStatusPerms", ["real", "effective", "savedSet", "filesystem"])
+ProcStatusPerms = namedtuple("ProcStatusPerms", "real effective savedSet filesystem")
 
 #=======================================================================================
 # Library
